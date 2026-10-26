@@ -1,0 +1,2482 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Windows 98 AI Skills and Agents Explorer - browse, inspect, and manage skills and agents for Antigravity, Codex, and Claude Code." />
+  <title>Windows 98 - AI Skills & Agents Explorer</title>
+  <link rel="stylesheet" href="98.css" />
+  <style>/* Hallmark · polish · redesign: polish · shape: app screen · theme: retro-os · built: the project */
+:root {
+  --win-teal: #008080;
+  --win-surface: #c0c0c0;
+  --win-surface-active: #a0a0a0;
+  --win-surface-selected: #e0e0e0;
+  --win-light: #fefefe;
+  --win-hilight: #dfdfdf;
+  --win-shadow: #808080;
+  --win-darkest: #060808;
+  --win-black-soft: #0a0a0a;
+  --win-navy: #000080;
+  --win-navy-light: #1084d0;
+  --win-navy-dim: #b5b5b5;
+  --win-navy-hover: rgba(0, 0, 128, 0.4);
+  --win-selection-bg: rgba(0, 0, 128, 0.28);
+  --win-selection-border: #fefefe;
+  --win-text: #222222;
+  --win-text-muted: #666666;
+  --win-text-dim: #888888;
+  --win-text-dark: #333333;
+  --win-status-text: #006600;
+  --win-status-bg: #e0ffe0;
+  --win-status-border: #00aa00;
+  --win-danger: #aa0000;
+  --win-tool-bg: #d9edf7;
+  --win-tool-border: #bce8f1;
+  --win-tool-text: #31708f;
+  --win-accent-soft: #fff0f5;
+  --win-toast-bg: #ffffe1;
+  --win-bsod-bg: #0000aa;
+  --win-yellow: #ffff00;
+  --win-row-hover: #f0f4ff;
+  --win-row-border: #f0f0f0;
+  --win-detail-path-bg: #f7f7f7;
+  --win-shadow-dark: rgba(0, 0, 0, 0.5);
+  --win-shadow-soft: rgba(0, 0, 0, 0.4);
+  --font-system: "Pixelated MS Sans Serif", Arial, sans-serif;
+  --font-body: Arial, sans-serif;
+  --font-mono: monospace;
+}
+
+* {
+  box-sizing: border-box;
+  user-select: none;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100vh;
+  overflow-x: clip;
+  overflow-y: clip;
+  background-color: var(--win-teal);
+  font-family: var(--font-system);
+  font-size: 11px;
+}
+
+/* Accessibility */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 1px dotted var(--win-darkest);
+  outline-offset: -2px;
+}
+
+/* Desktop & Selection Marquee */
+#desktop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 28px;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 14px 18px;
+  z-index: 1;
+}
+
+#selection-box {
+  position: absolute;
+  border: 1px dotted var(--win-light);
+  background-color: var(--win-selection-bg);
+  pointer-events: none;
+  display: none;
+  z-index: 8;
+}
+
+.desktop-icon {
+  width: 76px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  text-align: center;
+  color: var(--win-light);
+  padding: 4px;
+  border: 1px dotted transparent;
+  z-index: 2;
+}
+
+.desktop-icon:hover {
+  background-color: var(--win-navy-hover);
+}
+
+.desktop-icon.selected {
+  background-color: var(--win-navy) !important;
+  border: 1px dotted var(--win-yellow) !important;
+}
+
+.desktop-icon svg, .desktop-icon img {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 4px;
+  filter: drop-shadow(1px 1px 0 var(--win-darkest));
+}
+
+.desktop-icon-label {
+  font-size: 11px;
+  line-height: 1.2;
+  text-shadow: 1px 1px 0 var(--win-darkest);
+  word-break: break-word;
+}
+
+/* Window Caption Actions */
+.win-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.win-actions button {
+  min-width: 16px;
+  width: 16px;
+  height: 14px;
+  padding: 0;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px outset var(--win-light);
+  background: var(--win-surface);
+  box-shadow: inset 1px 1px 0 var(--win-light), inset -1px -1px 0 var(--win-shadow);
+  cursor: default;
+}
+
+.win-actions button:active {
+  border: 1px inset var(--win-darkest);
+  box-shadow: inset 1px 1px 0 var(--win-darkest);
+  background: var(--win-surface-active);
+}
+
+button[aria-label="Minimize"] {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg width='6' height='2' viewBox='0 0 6 2' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h6v2H0z' fill='%23000'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: center 8px !important;
+}
+
+button[aria-label="Maximize"] {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg width='9' height='9' viewBox='0 0 9 9' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M0 0v9h9V0H0zm8 8H1V2h7v6z' fill='%23000'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: center center !important;
+}
+
+button[aria-label="Restore"] {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg width='8' height='9' viewBox='0 0 8 9' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M2 0v2H0v7h6V7h2V0H2zm5 6H6V2H2V1h5v5zM5 8H1V4h4v4z' fill='%23000'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: center center !important;
+}
+
+button[aria-label="Close"] {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg width='8' height='7' viewBox='0 0 8 7' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M0 0h2v1h1v1h2V1h1V0h2v1H7v1H6v1H5v1h1v1h1v1h1v1H6V6H5V5H3v1H2v1H0V6h1V5h1V4h1V3H2V2H1V1H0V0z' fill='%23000'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: center center !important;
+  margin-left: 2px;
+}
+
+/* Window System */
+.window {
+  position: absolute;
+  min-width: 340px;
+  min-height: 230px;
+  max-height: calc(100vh - 28px);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 2px 2px 0 var(--win-darkest);
+  background: var(--win-surface);
+  border: 2px outset var(--win-light);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.window.maximized {
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: calc(100vh - 28px) !important;
+  max-height: calc(100vh - 28px) !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.win-caption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 4px;
+  background: linear-gradient(90deg, var(--win-navy), var(--win-navy-light));
+  color: var(--win-light);
+  font-weight: bold;
+  letter-spacing: 0;
+  cursor: default;
+}
+
+.win-caption.inactive {
+  background: linear-gradient(90deg, var(--win-shadow), var(--win-navy-dim));
+  color: var(--win-surface);
+}
+
+.win-caption-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.window-menu-bar {
+  display: flex;
+  gap: 12px;
+  padding: 2px 8px;
+  border-bottom: 1px solid var(--win-shadow);
+  background: var(--win-surface);
+  font-size: 11px;
+}
+
+.window-menu-bar span {
+  cursor: pointer;
+  padding: 1px 4px;
+}
+
+.window-menu-bar span:hover {
+  background: var(--win-navy);
+  color: var(--win-light);
+}
+
+.window-menu-bar u {
+  text-decoration: underline;
+}
+
+.window-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--win-shadow);
+  background: var(--win-surface);
+}
+
+.window-toolbar input[type="text"] {
+  padding: 2px 4px;
+  font-size: 11px;
+  flex: 1;
+  height: 22px;
+}
+
+.window-content {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  gap: 6px;
+  overflow: hidden;
+}
+
+/* Master Table Pane */
+.table-container {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: auto;
+  background: var(--win-light);
+}
+
+table.skills-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 11px;
+}
+
+table.skills-table th {
+  background: var(--win-surface);
+  border-top: 1px solid var(--win-light);
+  border-left: 1px solid var(--win-light);
+  border-right: 1px solid var(--win-shadow);
+  border-bottom: 1px solid var(--win-shadow);
+  padding: 2px 6px;
+  text-align: left;
+  font-weight: normal;
+  cursor: pointer;
+  z-index: 5;
+}
+
+table.skills-table td {
+  padding: 3px 6px;
+  border-bottom: 1px solid var(--win-row-border);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  max-width: 280px;
+  cursor: pointer;
+}
+
+table.skills-table tr:hover:not(.highlighted) {
+  background-color: var(--win-row-hover);
+}
+
+table.skills-table tr.highlighted {
+  background-color: var(--win-navy) !important;
+  color: var(--win-light) !important;
+}
+
+/* Detail Inspector */
+.detail-panel {
+  flex: 0 0 140px;
+  height: 140px;
+  min-height: 140px;
+  max-height: 140px;
+  padding: 10px 12px;
+  background: var(--win-light);
+  overflow-y: auto;
+  user-select: text;
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+  border-bottom: 1px dashed var(--win-shadow);
+  padding-bottom: 6px;
+}
+
+.detail-title {
+  font-weight: bold;
+  font-size: 12px;
+  color: var(--win-navy);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.detail-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  background: var(--win-surface-selected);
+  border: 1px solid var(--win-shadow);
+  font-size: 10px;
+  color: var(--win-text-dark);
+}
+
+.badge-tool {
+  background: var(--win-tool-bg);
+  border-color: var(--win-tool-border);
+  color: var(--win-tool-text);
+}
+
+.badge-active {
+  font-size: 10px;
+  font-weight: normal;
+  color: var(--win-status-text);
+  background: var(--win-status-bg);
+  padding: 1px 6px;
+  border: 1px solid var(--win-status-border);
+}
+
+.badge-accent {
+  background: var(--win-accent-soft);
+}
+
+.btn-label-danger {
+  color: var(--win-danger);
+  font-weight: bold;
+}
+
+.empty-state-notice {
+  color: var(--win-text-muted);
+  font-style: italic;
+  padding-top: 28px;
+  text-align: center;
+}
+
+.detail-desc {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--win-text);
+  margin-top: 6px;
+  margin-bottom: 8px;
+}
+
+.detail-path {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--win-text-muted);
+  background: var(--win-detail-path-bg);
+  padding: 3px 6px;
+  border: 1px inset var(--win-surface);
+  word-break: break-all;
+  margin-bottom: 8px;
+}
+
+.detail-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.detail-actions button {
+  padding: 2px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+/* Resizing Handles */
+.resizer {
+  position: absolute;
+  z-index: 50;
+}
+.resizer-r  { top: 0; right: -4px; width: 8px; height: 100%; cursor: ew-resize; }
+.resizer-b  { bottom: -4px; left: 0; width: 100%; height: 8px; cursor: ns-resize; }
+.resizer-l  { top: 0; left: -4px; width: 8px; height: 100%; cursor: ew-resize; }
+.resizer-t  { top: -4px; left: 0; width: 100%; height: 8px; cursor: ns-resize; }
+.resizer-rb { bottom: -4px; right: -4px; width: 14px; height: 14px; cursor: nwse-resize; }
+.resizer-lb { bottom: -4px; left: -4px; width: 12px; height: 12px; cursor: nesw-resize; }
+.resizer-rt { top: -4px; right: -4px; width: 12px; height: 12px; cursor: nesw-resize; }
+.resizer-lt { top: -4px; left: -4px; width: 12px; height: 12px; cursor: nwse-resize; }
+
+.resize-grip {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  background-image: radial-gradient(var(--win-shadow) 1px, transparent 1px);
+  background-size: 3px 3px;
+  background-position: right bottom;
+  cursor: nwse-resize;
+  z-index: 60;
+}
+
+/* Taskbar */
+#taskbar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  background: var(--win-surface);
+  border-top: 2px solid var(--win-light);
+  display: flex;
+  align-items: center;
+  padding: 2px 3px;
+  gap: 4px;
+  z-index: 9999;
+}
+
+#start-btn {
+  height: 22px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+}
+
+.taskbar-divider {
+  width: 2px;
+  height: 20px;
+  border-left: 1px solid var(--win-shadow);
+  border-right: 1px solid var(--win-light);
+  margin: 0 2px;
+}
+
+#taskbar-windows {
+  flex: 1;
+  display: flex;
+  gap: 3px;
+  overflow-x: auto;
+}
+
+.taskbar-tab {
+  height: 22px;
+  min-width: 110px;
+  max-width: 170px;
+  padding: 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  cursor: pointer;
+  text-overflow: ellipsis;
+  overflow-x: clip;
+  overflow-y: clip;
+  white-space: nowrap;
+}
+
+.taskbar-tab.active {
+  font-weight: bold;
+  background: var(--win-surface-selected);
+  box-shadow: inset 1px 1px 0 var(--win-darkest), inset -1px -1px 0 var(--win-light);
+}
+
+#system-tray {
+  height: 22px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px;
+  border-top: 1px solid var(--win-shadow);
+  border-left: 1px solid var(--win-shadow);
+  border-right: 1px solid var(--win-light);
+  border-bottom: 1px solid var(--win-light);
+  font-size: 11px;
+}
+
+/* Start Menu */
+#start-menu {
+  position: absolute;
+  bottom: 28px;
+  left: 2px;
+  width: 220px;
+  background: var(--win-surface);
+  border: 2px outset var(--win-light);
+  box-shadow: 2px 2px 4px var(--win-darkest);
+  display: none;
+  flex-direction: row;
+  z-index: 10000;
+}
+
+#start-banner {
+  width: 26px;
+  background: linear-gradient(180deg, var(--win-navy) 0%, var(--win-navy-light) 100%);
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  color: var(--win-light);
+  font-weight: bold;
+  font-size: 14px;
+  letter-spacing: 0;
+  padding: 8px 4px;
+  text-align: right;
+}
+
+#start-items {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 2px;
+}
+
+.start-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  cursor: pointer;
+}
+
+.start-item:hover {
+  background: var(--win-navy);
+  color: var(--win-light);
+}
+
+.start-divider {
+  border-top: 1px solid var(--win-shadow);
+  border-bottom: 1px solid var(--win-light);
+  margin: 3px 0;
+}
+
+/* Context Menu */
+#context-menu {
+  position: absolute;
+  background: var(--win-surface);
+  border: 2px outset var(--win-light);
+  box-shadow: 2px 2px 4px var(--win-shadow-dark);
+  display: none;
+  flex-direction: column;
+  min-width: 140px;
+  padding: 2px;
+  z-index: 20000;
+}
+
+.context-item {
+  padding: 4px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.context-item:hover {
+  background: var(--win-navy);
+  color: var(--win-light);
+}
+
+.context-divider {
+  border-top: 1px solid var(--win-shadow);
+  border-bottom: 1px solid var(--win-light);
+  margin: 3px 0;
+}
+
+/* Toast */
+#toast {
+  position: absolute;
+  bottom: 38px;
+  right: 12px;
+  background: var(--win-toast-bg);
+  border: 1px solid var(--win-darkest);
+  padding: 6px 12px;
+  font-size: 11px;
+  box-shadow: 2px 2px 4px var(--win-shadow-soft);
+  display: none;
+  z-index: 30000;
+  pointer-events: none;
+}
+
+
+#notepad-content {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  resize: none;
+  padding: 6px;
+  border: 1px inset var(--win-shadow);
+  outline: none;
+  background: var(--win-light);
+  color: var(--win-darkest);
+}
+
+/* BSOD Easter Egg */
+#bsod {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  background-color: var(--win-bsod-bg);
+  color: var(--win-light);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  padding: 40px;
+  box-sizing: border-box;
+  display: none;
+  z-index: 999999;
+  cursor: pointer;
+}
+
+#bsod-box {
+  max-width: 720px;
+  margin: 40px auto;
+  background: var(--win-bsod-bg);
+  border: 2px solid var(--win-light);
+  padding: 24px 32px;
+  box-shadow: 4px 4px 0 var(--win-darkest);
+}
+
+.bsod-badge {
+  background: var(--win-light);
+  color: var(--win-bsod-bg);
+  display: inline-block;
+  padding: 2px 8px;
+  font-weight: bold;
+  margin-bottom: 16px;
+}
+
+/* Task Manager Polish */
+#win-taskmgr fieldset {
+  padding: 12px 14px 14px 14px;
+  margin-bottom: 8px;
+}
+
+#win-taskmgr fieldset legend {
+  padding: 0 6px;
+  font-weight: bold;
+}
+
+.taskmgr-metric-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  margin-bottom: 3px;
+  font-weight: bold;
+}
+
+.taskmgr-tab-content {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  border: 2px outset var(--win-light);
+  background: var(--win-surface);
+  z-index: 2;
+  overflow: hidden;
+}
+
+.taskmgr-tab-content.is-hidden {
+  display: none;
+}
+
+.taskmgr-status-ok {
+  color: var(--win-status-text);
+  font-weight: bold;
+}
+
+.taskmgr-table-panel {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: auto;
+  background: var(--win-light);
+}
+
+.dialog-subtext-mono {
+  font-size: 10px;
+  color: var(--win-text-dim);
+  margin-top: 6px;
+  font-family: var(--font-mono);
+}
+
+.text-muted-dark {
+  color: var(--win-text-muted);
+}
+
+#cpu-canvas {
+  width: 100%;
+  height: 90px;
+  background: var(--win-darkest);
+  border: 1px inset var(--win-shadow);
+  display: block;
+  margin-top: 6px;
+}
+</style>
+</head>
+<body>
+
+  <!-- Desktop Selection Box -->
+  <div id="selection-box"></div>
+
+  <!-- Desktop Icons -->
+  <div id="desktop">
+    <div class="desktop-icon" onclick="openWindow('agents')" data-target="agents">
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="4" y="8" width="24" height="18" fill="#c0c0c0" stroke="#000" stroke-width="1.5"/>
+        <circle cx="10" cy="16" r="3" fill="#000080"/>
+        <circle cx="22" cy="16" r="3" fill="#000080"/>
+        <line x1="16" y1="2" x2="16" y2="8" stroke="#000" stroke-width="2"/>
+        <circle cx="16" cy="2" r="2" fill="#ff0000"/>
+        <rect x="10" y="21" width="12" height="2" fill="#000"/>
+      </svg>
+      <span class="desktop-icon-label">AI Agents (56)</span>
+    </div>
+
+    <div class="desktop-icon" onclick="openWindow('antigravity')" data-target="antigravity">
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="4" y="4" width="24" height="24" fill="#000080" stroke="#fff" stroke-width="2"/>
+        <rect x="8" y="8" width="16" height="16" fill="#1084d0"/>
+        <text x="16" y="20" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">AGY</text>
+      </svg>
+      <span class="desktop-icon-label">Antigravity Skills</span>
+    </div>
+
+    <div class="desktop-icon" onclick="openWindow('codex')" data-target="codex">
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="4" y="4" width="24" height="24" fill="#006400" stroke="#fff" stroke-width="2"/>
+        <rect x="8" y="8" width="16" height="16" fill="#2e8b57"/>
+        <text x="16" y="20" fill="#fff" font-size="9" font-weight="bold" text-anchor="middle">CDX</text>
+      </svg>
+      <span class="desktop-icon-label">Codex Skills</span>
+    </div>
+
+    <div class="desktop-icon" onclick="openWindow('claude')" data-target="claude">
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="4" y="4" width="24" height="24" fill="#d2691e" stroke="#fff" stroke-width="2"/>
+        <rect x="8" y="8" width="16" height="16" fill="#ff8c00"/>
+        <text x="16" y="20" fill="#fff" font-size="9" font-weight="bold" text-anchor="middle">CLD</text>
+      </svg>
+      <span class="desktop-icon-label">Claude Skills</span>
+    </div>
+
+    <div class="desktop-icon" onclick="openWindow('taskmgr')" data-target="taskmgr">
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="4" y="4" width="24" height="24" fill="#000" stroke="#808080" stroke-width="2"/>
+        <path d="M6 22 L12 16 L16 20 L22 10 L26 14" fill="none" stroke="#00ff00" stroke-width="2"/>
+      </svg>
+      <span class="desktop-icon-label">AI Task Manager</span>
+    </div>
+
+    <div class="desktop-icon" onclick="openNewSkillDialog()" data-target="newskill">
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="6" y="4" width="20" height="24" fill="#ffffff" stroke="#000" stroke-width="1.5"/>
+        <line x1="10" y1="10" x2="22" y2="10" stroke="#000"/>
+        <line x1="10" y1="14" x2="22" y2="14" stroke="#000"/>
+        <circle cx="22" cy="22" r="7" fill="#00aa00" stroke="#fff" stroke-width="1.5"/>
+        <text x="22" y="26" fill="#fff" font-size="12" font-weight="bold" text-anchor="middle">+</text>
+      </svg>
+      <span class="desktop-icon-label">New Skill…</span>
+    </div>
+
+    <div class="desktop-icon" onclick="rescanAllSkills()" data-target="refresh">
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <circle cx="16" cy="16" r="11" fill="#fff" stroke="#000" stroke-width="2"/>
+        <path d="M16 8 A8 8 0 1 1 10 12" fill="none" stroke="#000080" stroke-width="3"/>
+        <polygon points="10,8 10,14 16,12" fill="#000080"/>
+      </svg>
+      <span class="desktop-icon-label">Refresh All</span>
+    </div>
+
+    <div class="desktop-icon" onclick="triggerBSOD(event)" data-target="bsod">
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="4" y="4" width="24" height="24" fill="#0000aa" stroke="#fff" stroke-width="1.5"/>
+        <text x="16" y="21" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">:(</text>
+      </svg>
+      <span class="desktop-icon-label">AI BSOD Crash</span>
+    </div>
+  </div>
+
+  <!-- WINDOW: AI AGENTS MANAGER -->
+  <div id="win-agents" class="window" style="top: 20px; left: 160px; width: 680px; height: 500px; z-index: 15;">
+    <div class="win-caption" onmousedown="startDrag(event, 'win-agents')">
+      <div class="win-caption-text">
+        AI Agents & Subagents Manager (<span id="count-agents">0</span>)
+      </div>
+      <div class="win-actions">
+        <button aria-label="Minimize" onclick="minimizeWindow('agents')" title="Minimize"></button>
+        <button aria-label="Maximize" id="maxbtn-agents" onclick="toggleMaximize('agents')" title="Maximize"></button>
+        <button aria-label="Close" onclick="closeWindow('agents')" title="Close"></button>
+      </div>
+    </div>
+    <div class="window-menu-bar">
+      <span onclick="rescanAllSkills()"><u>R</u>efresh</span>
+      <span onclick="openNewSkillDialog()"><u>N</u>ew Agent/Skill</span>
+      <span onclick="cascadeWindows()"><u>V</u>iew</span>
+      <span onclick="showAbout()"><u>H</u>elp</span>
+    </div>
+    <div class="window-toolbar">
+      <label>Find Agent:</label>
+      <input type="text" id="search-agents" placeholder="Filter agents by name, role, model or tools…" oninput="filterAgents()" />
+      <button onclick="clearSearch('agents')">Clear</button>
+      <span class="detail-badge" id="badge-agents">Showing: 0</span>
+    </div>
+    <div class="window-content">
+      <div class="sunken-panel table-container">
+        <table class="skills-table">
+          <thead>
+            <tr>
+              <th onclick="sortTable('agents', 'name')" style="width: 180px;">Agent Name ⯆</th>
+              <th onclick="sortTable('agents', 'runtime')" style="width: 140px;">Runtime</th>
+              <th onclick="sortTable('agents', 'role')" style="width: 170px;">Role / Model</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-agents"></tbody>
+        </table>
+      </div>
+      <div class="sunken-panel detail-panel" id="detail-agents">
+        <div class="empty-state-notice">
+          Select an agent from the list above to view details, tools, and configurations.
+        </div>
+      </div>
+    </div>
+    <div class="status-bar" style="position: relative;">
+      <p class="status-bar-field" id="status-agents" style="flex: 2;">Ready</p>
+      <p class="status-bar-field" id="status-total-agents">Total: 0</p>
+      <p class="status-bar-field">Subagent Engine v2</p>
+      <div class="resize-grip" onmousedown="startResize(event, 'win-agents', 'rb')"></div>
+    </div>
+    <!-- 8 Resizing handles -->
+    <div class="resizer resizer-r" onmousedown="startResize(event, 'win-agents', 'r')"></div>
+    <div class="resizer resizer-b" onmousedown="startResize(event, 'win-agents', 'b')"></div>
+    <div class="resizer resizer-l" onmousedown="startResize(event, 'win-agents', 'l')"></div>
+    <div class="resizer resizer-t" onmousedown="startResize(event, 'win-agents', 't')"></div>
+    <div class="resizer resizer-rb" onmousedown="startResize(event, 'win-agents', 'rb')"></div>
+    <div class="resizer resizer-lb" onmousedown="startResize(event, 'win-agents', 'lb')"></div>
+    <div class="resizer resizer-rt" onmousedown="startResize(event, 'win-agents', 'rt')"></div>
+    <div class="resizer resizer-lt" onmousedown="startResize(event, 'win-agents', 'lt')"></div>
+  </div>
+
+  <!-- WINDOW: ANTIGRAVITY -->
+  <div id="win-antigravity" class="window" style="top: 35px; left: 60px; width: 640px; height: 480px; z-index: 10;">
+    <div class="win-caption" onmousedown="startDrag(event, 'win-antigravity')">
+      <div class="win-caption-text">
+        Antigravity & Gemini Skills (<span id="count-antigravity">0</span>)
+      </div>
+      <div class="win-actions">
+        <button aria-label="Minimize" onclick="minimizeWindow('antigravity')" title="Minimize"></button>
+        <button aria-label="Maximize" id="maxbtn-antigravity" onclick="toggleMaximize('antigravity')" title="Maximize"></button>
+        <button aria-label="Close" onclick="closeWindow('antigravity')" title="Close"></button>
+      </div>
+    </div>
+    <div class="window-menu-bar">
+      <span onclick="openNewSkillDialog('antigravity')"><u>N</u>ew Skill…</span>
+      <span onclick="rescanAllSkills()"><u>R</u>efresh</span>
+      <span onclick="cascadeWindows()"><u>V</u>iew</span>
+      <span onclick="showAbout()"><u>H</u>elp</span>
+    </div>
+    <div class="window-toolbar">
+      <label>Find:</label>
+      <input type="text" id="search-antigravity" placeholder="Filter by name, description or keyword…" oninput="filterSkills('antigravity')" />
+      <button onclick="clearSearch('antigravity')">Clear</button>
+      <button onclick="openNewSkillDialog('antigravity')">+ New</button>
+      <span class="detail-badge" id="badge-antigravity">Showing: 0</span>
+    </div>
+    <div class="window-content">
+      <div class="sunken-panel table-container">
+        <table class="skills-table">
+          <thead>
+            <tr>
+              <th onclick="sortTable('antigravity', 'name')" style="width: 200px;">Skill Name ⯆</th>
+              <th onclick="sortTable('antigravity', 'source')" style="width: 140px;">Source</th>
+              <th>Short Description</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-antigravity"></tbody>
+        </table>
+      </div>
+      <div class="sunken-panel detail-panel" id="detail-antigravity">
+        <div class="empty-state-notice">
+          Select a skill from the list above to view details & actions.
+        </div>
+      </div>
+    </div>
+    <div class="status-bar" style="position: relative;">
+      <p class="status-bar-field" id="status-antigravity" style="flex: 2;">Ready</p>
+      <p class="status-bar-field" id="status-total-antigravity">Total: 0</p>
+      <p class="status-bar-field">Antigravity 2.0</p>
+      <div class="resize-grip" onmousedown="startResize(event, 'win-antigravity', 'rb')"></div>
+    </div>
+    <div class="resizer resizer-r" onmousedown="startResize(event, 'win-antigravity', 'r')"></div>
+    <div class="resizer resizer-b" onmousedown="startResize(event, 'win-antigravity', 'b')"></div>
+    <div class="resizer resizer-l" onmousedown="startResize(event, 'win-antigravity', 'l')"></div>
+    <div class="resizer resizer-t" onmousedown="startResize(event, 'win-antigravity', 't')"></div>
+    <div class="resizer resizer-rb" onmousedown="startResize(event, 'win-antigravity', 'rb')"></div>
+    <div class="resizer resizer-lb" onmousedown="startResize(event, 'win-antigravity', 'lb')"></div>
+    <div class="resizer resizer-rt" onmousedown="startResize(event, 'win-antigravity', 'rt')"></div>
+    <div class="resizer resizer-lt" onmousedown="startResize(event, 'win-antigravity', 'lt')"></div>
+  </div>
+
+  <!-- WINDOW: CODEX -->
+  <div id="win-codex" class="window" style="top: 60px; left: 240px; width: 650px; height: 490px; z-index: 11;">
+    <div class="win-caption" onmousedown="startDrag(event, 'win-codex')">
+      <div class="win-caption-text">
+        Codex Skills Browser (<span id="count-codex">0</span>)
+      </div>
+      <div class="win-actions">
+        <button aria-label="Minimize" onclick="minimizeWindow('codex')" title="Minimize"></button>
+        <button aria-label="Maximize" id="maxbtn-codex" onclick="toggleMaximize('codex')" title="Maximize"></button>
+        <button aria-label="Close" onclick="closeWindow('codex')" title="Close"></button>
+      </div>
+    </div>
+    <div class="window-menu-bar">
+      <span onclick="openNewSkillDialog('codex')"><u>N</u>ew Skill…</span>
+      <span onclick="rescanAllSkills()"><u>R</u>efresh</span>
+      <span onclick="cascadeWindows()"><u>V</u>iew</span>
+      <span onclick="showAbout()"><u>H</u>elp</span>
+    </div>
+    <div class="window-toolbar">
+      <label>Find:</label>
+      <input type="text" id="search-codex" placeholder="Filter by name, description or keyword…" oninput="filterSkills('codex')" />
+      <button onclick="clearSearch('codex')">Clear</button>
+      <button onclick="openNewSkillDialog('codex')">+ New</button>
+      <span class="detail-badge" id="badge-codex">Showing: 0</span>
+    </div>
+    <div class="window-content">
+      <div class="sunken-panel table-container">
+        <table class="skills-table">
+          <thead>
+            <tr>
+              <th onclick="sortTable('codex', 'name')" style="width: 200px;">Skill Name ⯆</th>
+              <th onclick="sortTable('codex', 'source')" style="width: 140px;">Source</th>
+              <th>Short Description</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-codex"></tbody>
+        </table>
+      </div>
+      <div class="sunken-panel detail-panel" id="detail-codex">
+        <div class="empty-state-notice">
+          Select a skill from the list above to view details & actions.
+        </div>
+      </div>
+    </div>
+    <div class="status-bar" style="position: relative;">
+      <p class="status-bar-field" id="status-codex" style="flex: 2;">Ready</p>
+      <p class="status-bar-field" id="status-total-codex">Total: 0</p>
+      <p class="status-bar-field">OpenAI / Copilot</p>
+      <div class="resize-grip" onmousedown="startResize(event, 'win-codex', 'rb')"></div>
+    </div>
+    <div class="resizer resizer-r" onmousedown="startResize(event, 'win-codex', 'r')"></div>
+    <div class="resizer resizer-b" onmousedown="startResize(event, 'win-codex', 'b')"></div>
+    <div class="resizer resizer-l" onmousedown="startResize(event, 'win-codex', 'l')"></div>
+    <div class="resizer resizer-t" onmousedown="startResize(event, 'win-codex', 't')"></div>
+    <div class="resizer resizer-rb" onmousedown="startResize(event, 'win-codex', 'rb')"></div>
+    <div class="resizer resizer-lb" onmousedown="startResize(event, 'win-codex', 'lb')"></div>
+    <div class="resizer resizer-rt" onmousedown="startResize(event, 'win-codex', 'rt')"></div>
+    <div class="resizer resizer-lt" onmousedown="startResize(event, 'win-codex', 'lt')"></div>
+  </div>
+
+  <!-- WINDOW: CLAUDE -->
+  <div id="win-claude" class="window" style="top: 85px; left: 380px; width: 600px; height: 460px; z-index: 12;">
+    <div class="win-caption" onmousedown="startDrag(event, 'win-claude')">
+      <div class="win-caption-text">
+        Claude Code Skills (<span id="count-claude">0</span>)
+      </div>
+      <div class="win-actions">
+        <button aria-label="Minimize" onclick="minimizeWindow('claude')" title="Minimize"></button>
+        <button aria-label="Maximize" id="maxbtn-claude" onclick="toggleMaximize('claude')" title="Maximize"></button>
+        <button aria-label="Close" onclick="closeWindow('claude')" title="Close"></button>
+      </div>
+    </div>
+    <div class="window-menu-bar">
+      <span onclick="openNewSkillDialog('claude')"><u>N</u>ew Skill…</span>
+      <span onclick="rescanAllSkills()"><u>R</u>efresh</span>
+      <span onclick="cascadeWindows()"><u>V</u>iew</span>
+      <span onclick="showAbout()"><u>H</u>elp</span>
+    </div>
+    <div class="window-toolbar">
+      <label>Find:</label>
+      <input type="text" id="search-claude" placeholder="Filter by name, description or keyword…" oninput="filterSkills('claude')" />
+      <button onclick="clearSearch('claude')">Clear</button>
+      <button onclick="openNewSkillDialog('claude')">+ New</button>
+      <span class="detail-badge" id="badge-claude">Showing: 0</span>
+    </div>
+    <div class="window-content">
+      <div class="sunken-panel table-container">
+        <table class="skills-table">
+          <thead>
+            <tr>
+              <th onclick="sortTable('claude', 'name')" style="width: 200px;">Skill Name ⯆</th>
+              <th onclick="sortTable('claude', 'source')" style="width: 140px;">Source</th>
+              <th>Short Description</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-claude"></tbody>
+        </table>
+      </div>
+      <div class="sunken-panel detail-panel" id="detail-claude">
+        <div class="empty-state-notice">
+          Select a skill from the list above to view details & actions.
+        </div>
+      </div>
+    </div>
+    <div class="status-bar" style="position: relative;">
+      <p class="status-bar-field" id="status-claude" style="flex: 2;">Ready</p>
+      <p class="status-bar-field" id="status-total-claude">Total: 0</p>
+      <p class="status-bar-field">Anthropic Claude</p>
+      <div class="resize-grip" onmousedown="startResize(event, 'win-claude', 'rb')"></div>
+    </div>
+    <div class="resizer resizer-r" onmousedown="startResize(event, 'win-claude', 'r')"></div>
+    <div class="resizer resizer-b" onmousedown="startResize(event, 'win-claude', 'b')"></div>
+    <div class="resizer resizer-l" onmousedown="startResize(event, 'win-claude', 'l')"></div>
+    <div class="resizer resizer-t" onmousedown="startResize(event, 'win-claude', 't')"></div>
+    <div class="resizer resizer-rb" onmousedown="startResize(event, 'win-claude', 'rb')"></div>
+    <div class="resizer resizer-lb" onmousedown="startResize(event, 'win-claude', 'lb')"></div>
+    <div class="resizer resizer-rt" onmousedown="startResize(event, 'win-claude', 'rt')"></div>
+    <div class="resizer resizer-lt" onmousedown="startResize(event, 'win-claude', 'lt')"></div>
+  </div>
+
+  <!-- WINDOW: AI TASK MANAGER -->
+  <div id="win-taskmgr" class="window" style="top: 70px; left: 140px; width: 440px; height: 350px; display: none; z-index: 200;">
+    <div class="win-caption" onmousedown="startDrag(event, 'win-taskmgr')">
+      <div class="win-caption-text">
+        AI Task Manager & Resource Monitor
+      </div>
+      <div class="win-actions">
+        <button aria-label="Minimize" onclick="minimizeWindow('taskmgr')"></button>
+        <button aria-label="Maximize" id="maxbtn-taskmgr" onclick="toggleMaximize('taskmgr')"></button>
+        <button aria-label="Close" onclick="closeWindow('taskmgr')"></button>
+      </div>
+    </div>
+    <div class="window-body" style="flex: 1; display: flex; flex-direction: column; padding: 10px 10px 4px 10px;">
+      <section class="tabs" style="flex: 1; display: flex; flex-direction: column;">
+        <menu role="tablist">
+          <li role="tab" id="tab-li-perf" aria-selected="true" onclick="switchTaskmgrTab('perf')"><a href="javascript:void(0)">Performance</a></li>
+          <li role="tab" id="tab-li-procs" onclick="switchTaskmgrTab('procs')"><a href="javascript:void(0)">AI Processes</a></li>
+          <li role="tab" id="tab-li-apps" onclick="switchTaskmgrTab('apps')"><a href="javascript:void(0)">Applications</a></li>
+        </menu>
+
+        <!-- Tab 1: Performance -->
+        <article role="tabpanel" id="tabpanel-perf" class="taskmgr-tab-content">
+          <fieldset>
+            <legend>Token Throughput & GPU Utilization</legend>
+            <canvas id="cpu-canvas" width="380" height="70" role="img" aria-label="Token Throughput and GPU Utilization Graph"></canvas>
+            <div class="taskmgr-metric-row" style="font-family: monospace;">
+              <span>Speed: ~48.2 tok/sec</span>
+              <span class="taskmgr-status-ok">Normal Operation</span>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Context Window Memory (1M Tokens)</legend>
+            <div class="progress-indicator" style="height: 18px; margin: 8px 0 10px 0;">
+              <span class="progress-indicator-bar" style="width: 14%;"></span>
+            </div>
+            <div class="taskmgr-metric-row">
+              <span>Used: 142,390 Tokens (14.2%)</span>
+              <span>Available: 857,610 Tokens</span>
+            </div>
+          </fieldset>
+        </article>
+
+        <!-- Tab 2: AI Processes -->
+        <article role="tabpanel" id="tabpanel-procs" class="taskmgr-tab-content is-hidden">
+          <div class="sunken-panel taskmgr-table-panel">
+            <table class="skills-table">
+              <thead>
+                <tr>
+                  <th>Agent / Process</th>
+                  <th>Status</th>
+                  <th>Model</th>
+                  <th>Mem (KB)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="highlighted">
+                  <td>hallmark-designer</td>
+                  <td>Running</td>
+                  <td>Gemini 3.8 Flash</td>
+                  <td>14,200</td>
+                </tr>
+                <tr>
+                  <td>research-subagent</td>
+                  <td>Idle</td>
+                  <td>Gemini 3.8 Flash</td>
+                  <td>8,450</td>
+                </tr>
+                <tr>
+                  <td>codex-runtime</td>
+                  <td>Ready</td>
+                  <td>GPT-4o / Codex</td>
+                  <td>32,100</td>
+                </tr>
+                <tr>
+                  <td>claude-engine</td>
+                  <td>Ready</td>
+                  <td>Claude 3.7 Sonnet</td>
+                  <td>28,400</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <!-- Tab 3: Applications -->
+        <article role="tabpanel" id="tabpanel-apps" class="taskmgr-tab-content is-hidden">
+          <div class="sunken-panel taskmgr-table-panel">
+            <table class="skills-table">
+              <thead>
+                <tr>
+                  <th>Task</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="taskmgr-apps-list"></tbody>
+            </table>
+          </div>
+          <div style="display: flex; justify-content: flex-end; gap: 6px; margin-top: 10px;">
+            <button onclick="endSelectedTask()">End Task</button>
+            <button onclick="openWindow('antigravity')">Switch To</button>
+          </div>
+        </article>
+      </section>
+    </div>
+    <div class="status-bar" style="position: relative;">
+      <p class="status-bar-field">Processes: 4</p>
+      <p class="status-bar-field">CPU: 4%</p>
+      <p class="status-bar-field">Mem: 83.1 MB</p>
+      <div class="resize-grip" onmousedown="startResize(event, 'win-taskmgr', 'rb')"></div>
+    </div>
+  </div>
+
+  <!-- WINDOW: NOTEPAD -->
+  <div id="win-notepad" class="window" style="top: 110px; left: 180px; width: 620px; height: 460px; display: none; z-index: 100;">
+    <div class="win-caption" onmousedown="startDrag(event, 'win-notepad')">
+      <div class="win-caption-text">
+        <span id="notepad-title">Notepad - SKILL.md</span>
+      </div>
+      <div class="win-actions">
+        <button aria-label="Minimize" onclick="minimizeWindow('notepad')"></button>
+        <button aria-label="Maximize" id="maxbtn-notepad" onclick="toggleMaximize('notepad')"></button>
+        <button aria-label="Close" onclick="closeWindow('notepad')"></button>
+      </div>
+    </div>
+    <div class="window-menu-bar">
+      <span onclick="saveNotepadContent()"><u>S</u>ave</span>
+      <span onclick="closeWindow('notepad')"><u>E</u>xit</span>
+    </div>
+    <div class="window-content" style="padding: 4px;">
+      <textarea id="notepad-content"></textarea>
+    </div>
+    <div class="status-bar" style="position: relative;">
+      <p class="status-bar-field" id="notepad-status" style="flex: 2;">Editing SKILL.md</p>
+      <div style="display: flex; gap: 4px; padding-right: 16px;">
+        <button class="default" onclick="saveNotepadContent()">Save File</button>
+        <button onclick="closeWindow('notepad')">Cancel</button>
+      </div>
+      <div class="resize-grip" onmousedown="startResize(event, 'win-notepad', 'rb')"></div>
+    </div>
+  </div>
+
+  <!-- RUN DIALOG (Win+R) -->
+  <div id="win-run" class="window" style="bottom: 34px; left: 10px; width: 340px; display: none; z-index: 22000;">
+    <div class="win-caption" onmousedown="startDrag(event, 'win-run')">
+      <div class="win-caption-text">Run AI Skill or Agent</div>
+      <div class="win-actions">
+        <button aria-label="Close" onclick="closeWindow('run')"></button>
+      </div>
+    </div>
+    <div class="window-body" style="padding: 12px;">
+      <div style="display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px;">
+        <svg viewBox="0 0 32 32" style="width: 32px; height: 32px; flex-shrink: 0;" aria-hidden="true">
+          <rect x="2" y="6" width="28" height="20" fill="#fff" stroke="#000" stroke-width="1.5"/>
+          <path d="M6 10 L14 16 L6 22" fill="none" stroke="#000080" stroke-width="2"/>
+        </svg>
+        <div>
+          Type the name of a skill or agent to launch or inspect it.
+        </div>
+      </div>
+      <div class="field-row" style="margin-bottom: 12px;">
+        <label for="run-input">Open:</label>
+        <input type="text" id="run-input" placeholder="e.g. hallmark, research, win98-ui" style="flex: 1;" onkeydown="if(event.key==='Enter') executeRun();" />
+      </div>
+      <section class="field-row" style="justify-content: flex-end; gap: 6px;">
+        <button class="default" onclick="executeRun()">OK</button>
+        <button onclick="closeWindow('run')">Cancel</button>
+      </section>
+    </div>
+  </div>
+
+  <!-- CONFIRM DELETE DIALOG -->
+  <div id="win-delete-confirm" class="window" style="top: 30%; left: 35%; width: 380px; display: none; z-index: 15000;">
+    <div class="win-caption" onmousedown="startDrag(event, 'win-delete-confirm')">
+      <div class="win-caption-text">Confirm Skill Deletion</div>
+      <div class="win-actions">
+        <button aria-label="Close" onclick="closeDeleteDialog()"></button>
+      </div>
+    </div>
+    <div class="window-body" style="padding: 14px;">
+      <div style="display: flex; gap: 14px; align-items: flex-start; margin-bottom: 16px;">
+        <svg viewBox="0 0 32 32" style="width: 32px; height: 32px; flex-shrink: 0;" aria-hidden="true">
+          <circle cx="16" cy="16" r="14" fill="#ffff00" stroke="#000" stroke-width="2"/>
+          <text x="16" y="23" fill="#000" font-size="20" font-weight="bold" text-anchor="middle">!</text>
+        </svg>
+        <div>
+          <p style="margin: 0; line-height: 1.4;">
+            Are you sure you want to permanently delete the skill <strong id="delete-skill-name"></strong> and all its files from disk?
+          </p>
+          <div class="dialog-subtext-mono" id="delete-skill-path"></div>
+        </div>
+      </div>
+      <section class="field-row" style="justify-content: flex-end; gap: 8px;">
+        <button class="default" onclick="confirmDeleteSkill()" style="min-width: 70px;">Yes</button>
+        <button onclick="closeDeleteDialog()" style="min-width: 70px;">No</button>
+      </section>
+    </div>
+  </div>
+
+  <!-- NEW SKILL DIALOG -->
+  <div id="win-new-skill" class="window" style="top: 25%; left: 35%; width: 420px; display: none; z-index: 15000;">
+    <div class="win-caption" onmousedown="startDrag(event, 'win-new-skill')">
+      <div class="win-caption-text">Create New Skill</div>
+      <div class="win-actions">
+        <button aria-label="Close" onclick="closeNewSkillDialog()"></button>
+      </div>
+    </div>
+    <div class="window-body" style="padding: 14px;">
+      <div class="field-row" style="margin-bottom: 8px;">
+        <label style="width: 90px;">Runtime:</label>
+        <select id="new-skill-runtime" style="flex: 1;">
+          <option value="antigravity">Antigravity (c:\bat\.agents\skills)</option>
+          <option value="codex">Codex (~/.codex/skills)</option>
+          <option value="claude">Claude (~/.claude/skills)</option>
+        </select>
+      </div>
+      <div class="field-row" style="margin-bottom: 8px;">
+        <label style="width: 90px;" for="new-skill-name">Skill Name:</label>
+        <input type="text" id="new-skill-name" placeholder="my-new-skill" style="flex: 1;" />
+      </div>
+      <div class="field-row-stacked" style="margin-bottom: 12px;">
+        <label for="new-skill-desc">Description (What & When to use):</label>
+        <textarea id="new-skill-desc" rows="3" placeholder="Use when the user asks to…" style="width: 100%;"></textarea>
+      </div>
+      <section class="field-row" style="justify-content: flex-end; gap: 8px;">
+        <button class="default" onclick="submitCreateSkill()" style="min-width: 75px;">Create</button>
+        <button onclick="closeNewSkillDialog()" style="min-width: 75px;">Cancel</button>
+      </section>
+    </div>
+  </div>
+
+  <!-- ABOUT DIALOG -->
+  <div id="win-about" class="window" style="top: 25%; left: 35%; width: 380px; display: none; z-index: 16000;">
+    <div class="win-caption" onmousedown="startDrag(event, 'win-about')">
+      <div class="win-caption-text">About Windows 98 Skills Explorer</div>
+      <div class="win-actions">
+        <button aria-label="Close" onclick="closeWindow('about')"></button>
+      </div>
+    </div>
+    <div class="window-body" style="padding: 14px;">
+      <div style="display: flex; gap: 14px; align-items: flex-start; margin-bottom: 12px;">
+        <svg viewBox="0 0 32 32" style="width: 36px; height: 36px; flex-shrink: 0;" aria-hidden="true">
+          <rect x="2" y="2" width="28" height="28" fill="#000080" stroke="#fff" stroke-width="1.5"/>
+          <text x="16" y="21" fill="#fff" font-size="18" font-weight="bold" text-anchor="middle">98</text>
+        </svg>
+        <div>
+          <strong style="font-size: 13px;">AI Skills & Agents Explorer '98</strong><br>
+          <span class="text-muted-dark">Version 3.0 (Build 1998.2026-ULTRA)</span><br><br>
+          Complete AI developer workstation: Skills, Subagents, Task Manager, BSOD Simulator, Marquee Selection, and Sound Effects!
+        </div>
+      </div>
+      <section class="field-row" style="justify-content: flex-end;">
+        <button class="default" onclick="closeWindow('about')" style="min-width: 70px;">OK</button>
+      </section>
+    </div>
+  </div>
+
+  <!-- RIGHT-CLICK DESKTOP CONTEXT MENU -->
+  <div id="context-menu">
+    <div class="context-item" onclick="openWindow('agents'); hideContextMenu();">
+      AI Agents Manager
+    </div>
+    <div class="context-item" onclick="openWindow('taskmgr'); hideContextMenu();">
+      AI Task Manager
+    </div>
+    <div class="context-divider"></div>
+    <div class="context-item" onclick="rescanAllSkills(); hideContextMenu();">
+      Refresh Database (F5)
+    </div>
+    <div class="context-item" onclick="cascadeWindows(); hideContextMenu();">
+      Cascade Windows
+    </div>
+    <div class="context-divider"></div>
+    <div class="context-item" onclick="openNewSkillDialog(); hideContextMenu();">
+      New Skill…
+    </div>
+    <div class="context-item" onclick="triggerBSOD(event); hideContextMenu();">
+      Simulate AI Crash (BSOD)
+    </div>
+    <div class="context-divider"></div>
+    <div class="context-item" onclick="showAbout(); hideContextMenu();">
+      Properties & About
+    </div>
+  </div>
+
+  <!-- BLUE SCREEN OF DEATH (BSOD) -->
+  <div id="bsod" onclick="dismissBSOD(event)">
+    <div id="bsod-box">
+      <div class="bsod-badge">
+        Windows 98 AI Runtime Exception
+      </div>
+      <p>
+        An unhandled prompt exception 0E has occurred at 0028:C0011E36 in VXD AGY_ATTENTION(01) + 00010E36.
+        The generative neural model has entered recursive hallucination loop.
+      </p>
+      <p>
+        * Press any key or click anywhere to flush KV cache and reboot desktop.<br>
+        * Press CTRL+ALT+DEL to restart Antigravity and reload all subagents.<br>
+        * Context window: 142,390 / 1,000,000 tokens saved to swap space.
+      </p>
+      <p style="text-align: center; margin-top: 24px; animation: blink 1s infinite;">
+        Press any key to continue _
+      </p>
+      <div style="text-align: center; margin-top: 18px;">
+        <button type="button" class="default" style="font-family: inherit; font-size: 11px; padding: 4px 18px; cursor: pointer;" onclick="dismissBSOD(event)">Reboot Desktop</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Start Menu -->
+  <div id="start-menu">
+    <div id="start-banner">Windows 98</div>
+    <div id="start-items">
+      <div class="start-item" onclick="openWindow('agents'); toggleStartMenu(false);">
+        AI Agents Manager
+      </div>
+      <div class="start-item" onclick="openWindow('antigravity'); toggleStartMenu(false);">
+        Antigravity Skills
+      </div>
+      <div class="start-item" onclick="openWindow('codex'); toggleStartMenu(false);">
+        Codex Skills
+      </div>
+      <div class="start-item" onclick="openWindow('claude'); toggleStartMenu(false);">
+        Claude Skills
+      </div>
+      <div class="start-divider"></div>
+      <div class="start-item" onclick="openWindow('taskmgr'); toggleStartMenu(false);">
+        AI Task Manager…
+      </div>
+      <div class="start-item" onclick="openWindow('run'); toggleStartMenu(false);">
+        Run…
+      </div>
+      <div class="start-item" onclick="openNewSkillDialog(); toggleStartMenu(false);">
+        Create New Skill…
+      </div>
+      <div class="start-item" onclick="rescanAllSkills(); toggleStartMenu(false);">
+        Refresh Skills Database
+      </div>
+      <div class="start-item" onclick="cascadeWindows(); toggleStartMenu(false);">
+        Cascade All Windows
+      </div>
+      <div class="start-divider"></div>
+      <div class="start-item" onclick="triggerBSOD(event); toggleStartMenu(false);">
+        Simulate AI Crash (BSOD)
+      </div>
+      <div class="start-item" onclick="showAbout(); toggleStartMenu(false);">
+        About Explorer…
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast">Ready</div>
+
+  <!-- Taskbar -->
+  <div id="taskbar">
+    <button id="start-btn" onclick="toggleStartMenu()">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+        <rect x="1" y="1" width="6" height="6" fill="#ff0000"/>
+        <rect x="9" y="1" width="6" height="6" fill="#00aa00"/>
+        <rect x="1" y="9" width="6" height="6" fill="#0000ff"/>
+        <rect x="9" y="9" width="6" height="6" fill="#ffaa00"/>
+      </svg>
+      Start
+    </button>
+    <div class="taskbar-divider"></div>
+
+    <div id="taskbar-windows">
+      <button class="taskbar-tab active" id="tab-btn-agents" onclick="handleTaskbarClick('agents')">
+        Agents (56)
+      </button>
+      <button class="taskbar-tab active" id="tab-btn-antigravity" onclick="handleTaskbarClick('antigravity')">
+        Antigravity
+      </button>
+      <button class="taskbar-tab active" id="tab-btn-codex" onclick="handleTaskbarClick('codex')">
+        Codex
+      </button>
+      <button class="taskbar-tab active" id="tab-btn-claude" onclick="handleTaskbarClick('claude')">
+        Claude
+      </button>
+      <button class="taskbar-tab" id="tab-btn-taskmgr" style="display:none;" onclick="handleTaskbarClick('taskmgr')">
+        Task Manager
+      </button>
+      <button class="taskbar-tab" id="tab-btn-notepad" style="display:none;" onclick="handleTaskbarClick('notepad')">
+        Notepad
+      </button>
+    </div>
+
+    <div id="system-tray">
+      <span id="tray-audio" onclick="toggleAudio()" title="Sound On / Off">VOL</span>
+      <span id="tray-clock">12:00 PM</span>
+    </div>
+  </div>
+
+  <!-- Data & Logic -->
+  <script src="skills_data.js"></script>
+  <script>
+    let topZ = 20;
+    let audioEnabled = true;
+    let audioCtx = null;
+
+    const windowState = {
+      agents:      { isMaximized: false, isMinimized: false, restoreRect: null, sortCol: 'name', sortAsc: true },
+      antigravity: { isMaximized: false, isMinimized: false, restoreRect: null, sortCol: 'name', sortAsc: true },
+      codex:       { isMaximized: false, isMinimized: false, restoreRect: null, sortCol: 'name', sortAsc: true },
+      claude:      { isMaximized: false, isMinimized: false, restoreRect: null, sortCol: 'name', sortAsc: true },
+      taskmgr:     { isMaximized: false, isMinimized: false, restoreRect: null },
+      notepad:     { isMaximized: false, isMinimized: false, restoreRect: null, currentPath: null, currentSkillName: null },
+      run:         { isMaximized: false, isMinimized: false, restoreRect: null },
+      about:       { isMaximized: false, isMinimized: false, restoreRect: null }
+    };
+
+    let RAW_DATA = { antigravity: [], codex: [], claude: [], agents: [] };
+    let deleteTarget = null;
+
+    // Synthesized Sound Effects (Web Audio API)
+    function playBeep(freq, duration, type='sine') {
+      if (!audioEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function playChord() {
+      if (!audioEnabled) return;
+      playBeep(523.25, 0.4); // C5
+      setTimeout(() => playBeep(659.25, 0.4), 80); // E5
+      setTimeout(() => playBeep(783.99, 0.5), 160); // G5
+      setTimeout(() => playBeep(1046.50, 0.7), 240); // C6
+    }
+
+    function toggleAudio() {
+      audioEnabled = !audioEnabled;
+      document.getElementById('tray-audio').textContent = audioEnabled ? '[Vol]' : '[Mute]';
+      showToast(audioEnabled ? 'Sound enabled' : 'Sound muted');
+    }
+
+    // Play chord on first click anywhere
+    document.addEventListener('click', function initSound() {
+      playChord();
+      document.removeEventListener('click', initSound);
+    }, { once: true });
+
+    // Toast
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.style.display = 'block';
+      setTimeout(() => { t.style.display = 'none'; }, 2500);
+    }
+
+    // Clock
+    function updateClock() {
+      const now = new Date();
+      let hours = now.getHours();
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12 || 12;
+      document.getElementById('tray-clock').textContent = `${hours}:${minutes} ${ampm}`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // -------------------------------------------------------------
+    // DESKTOP MARQUEE SELECTION (Удерживать мышью и выделять)
+    // -------------------------------------------------------------
+    const desktopEl = document.getElementById('desktop');
+    const selectionBox = document.getElementById('selection-box');
+    let isSelecting = false;
+    let selStartX = 0;
+    let selStartY = 0;
+
+    desktopEl.addEventListener('mousedown', (e) => {
+      // Only start selection if clicking directly on desktop background
+      if (e.target !== desktopEl) return;
+      if (e.button !== 0) return; // Left mouse button only
+
+      isSelecting = true;
+      selStartX = e.clientX;
+      selStartY = e.clientY;
+
+      selectionBox.style.left = `${selStartX}px`;
+      selectionBox.style.top = `${selStartY}px`;
+      selectionBox.style.width = '0px';
+      selectionBox.style.height = '0px';
+      selectionBox.style.display = 'block';
+
+      // Clear previous selection unless Shift or Ctrl is pressed
+      if (!e.shiftKey && !e.ctrlKey) {
+        document.querySelectorAll('.desktop-icon').forEach(icon => icon.classList.remove('selected'));
+      }
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isSelecting) return;
+
+      const currentX = e.clientX;
+      const currentY = e.clientY;
+
+      const left = Math.min(selStartX, currentX);
+      const top = Math.min(selStartY, currentY);
+      const width = Math.abs(currentX - selStartX);
+      const height = Math.abs(currentY - selStartY);
+
+      selectionBox.style.left = `${left}px`;
+      selectionBox.style.top = `${top}px`;
+      selectionBox.style.width = `${width}px`;
+      selectionBox.style.height = `${height}px`;
+
+      // Check collision with desktop icons
+      const boxRect = { left, top, right: left + width, bottom: top + height };
+      document.querySelectorAll('.desktop-icon').forEach(icon => {
+        const iconRect = icon.getBoundingClientRect();
+        const intersects = !(
+          iconRect.right < boxRect.left ||
+          iconRect.left > boxRect.right ||
+          iconRect.bottom < boxRect.top ||
+          iconRect.top > boxRect.bottom
+        );
+        if (intersects) {
+          icon.classList.add('selected');
+        } else if (!e.shiftKey && !e.ctrlKey) {
+          icon.classList.remove('selected');
+        }
+      });
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (isSelecting) {
+        isSelecting = false;
+        selectionBox.style.display = 'none';
+      }
+    });
+
+    // -------------------------------------------------------------
+    // DESKTOP RIGHT-CLICK CONTEXT MENU
+    // -------------------------------------------------------------
+    const contextMenu = document.getElementById('context-menu');
+    desktopEl.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      contextMenu.style.left = `${Math.min(e.clientX, window.innerWidth - 190)}px`;
+      contextMenu.style.top = `${Math.min(e.clientY, window.innerHeight - 240)}px`;
+      contextMenu.style.display = 'flex';
+    });
+
+    function hideContextMenu() {
+      contextMenu.style.display = 'none';
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!contextMenu.contains(e.target)) hideContextMenu();
+    });
+
+    // -------------------------------------------------------------
+    // BLUE SCREEN OF DEATH (AI Crash Simulator)
+    // -------------------------------------------------------------
+    let bsodOpenedAt = 0;
+
+    function triggerBSOD(e) {
+      if (e) {
+        if (e.stopPropagation) e.stopPropagation();
+        if (e.preventDefault) e.preventDefault();
+      }
+      hideContextMenu();
+      toggleStartMenu(false);
+      bsodOpenedAt = Date.now();
+      const bsod = document.getElementById('bsod');
+      if (bsod) bsod.style.display = 'block';
+      playBeep(220, 0.8, 'sawtooth');
+    }
+
+    function dismissBSOD(e) {
+      if (e) {
+        if (e.stopPropagation) e.stopPropagation();
+      }
+      // Require at least 1200ms before allowing dismissal (prevents double-click, mouseup or accidental instant dismiss)
+      if (Date.now() - bsodOpenedAt < 1200) {
+        return;
+      }
+      const bsod = document.getElementById('bsod');
+      if (bsod) bsod.style.display = 'none';
+      playChord();
+      showToast('AI Runtime restored from checkpoint.');
+    }
+
+    document.addEventListener('keydown', (e) => {
+      const bsod = document.getElementById('bsod');
+      if (bsod && bsod.style.display === 'block') {
+        if (Date.now() - bsodOpenedAt >= 1000) {
+          dismissBSOD(e);
+        }
+      }
+    });
+
+    // -------------------------------------------------------------
+    // WINDOW MANAGEMENT (Focus, Open, Close, Minimize, Maximize)
+    // -------------------------------------------------------------
+    function focusWindow(winKey) {
+      topZ++;
+      const el = document.getElementById(`win-${winKey}`);
+      if (!el) return;
+      el.style.zIndex = topZ;
+
+      document.querySelectorAll('.window').forEach(w => {
+        const tb = w.querySelector('.win-caption');
+        if (tb) tb.classList.add('inactive');
+      });
+      const activeTb = el.querySelector('.win-caption');
+      if (activeTb) activeTb.classList.remove('inactive');
+
+      document.querySelectorAll('.taskbar-tab').forEach(t => t.classList.remove('active'));
+      const activeTab = document.getElementById(`tab-btn-${winKey}`);
+      if (activeTab) activeTab.classList.add('active');
+    }
+
+    function openWindow(winKey) {
+      const el = document.getElementById(`win-${winKey}`);
+      if (!el) return;
+      el.style.display = 'flex';
+      windowState[winKey].isMinimized = false;
+      focusWindow(winKey);
+
+      let tab = document.getElementById(`tab-btn-${winKey}`);
+      if (tab) tab.style.display = 'flex';
+      playBeep(600, 0.05);
+    }
+
+    function closeWindow(winKey) {
+      const el = document.getElementById(`win-${winKey}`);
+      if (el) el.style.display = 'none';
+      const tab = document.getElementById(`tab-btn-${winKey}`);
+      if (tab) tab.style.display = 'none';
+      playBeep(400, 0.05);
+    }
+
+    function minimizeWindow(winKey) {
+      const el = document.getElementById(`win-${winKey}`);
+      if (el) el.style.display = 'none';
+      windowState[winKey].isMinimized = true;
+      const tab = document.getElementById(`tab-btn-${winKey}`);
+      if (tab) tab.classList.remove('active');
+    }
+
+    function toggleMaximize(winKey) {
+      const el = document.getElementById(`win-${winKey}`);
+      if (!el) return;
+      const state = windowState[winKey];
+      const maxBtn = document.getElementById(`maxbtn-${winKey}`);
+
+      if (!state.isMaximized) {
+        state.restoreRect = {
+          top: el.style.top,
+          left: el.style.left,
+          width: el.style.width,
+          height: el.style.height
+        };
+        el.classList.add('maximized');
+        state.isMaximized = true;
+        if (maxBtn) {
+          maxBtn.setAttribute('aria-label', 'Restore');
+          maxBtn.title = 'Restore';
+        }
+      } else {
+        el.classList.remove('maximized');
+        if (state.restoreRect) {
+          el.style.top = state.restoreRect.top;
+          el.style.left = state.restoreRect.left;
+          el.style.width = state.restoreRect.width;
+          el.style.height = state.restoreRect.height;
+        }
+        state.isMaximized = false;
+        if (maxBtn) {
+          maxBtn.setAttribute('aria-label', 'Maximize');
+          maxBtn.title = 'Maximize';
+        }
+      }
+      focusWindow(winKey);
+    }
+
+    function handleTaskbarClick(winKey) {
+      const el = document.getElementById(`win-${winKey}`);
+      const state = windowState[winKey];
+      if (el.style.display === 'none' || state.isMinimized) {
+        el.style.display = 'flex';
+        state.isMinimized = false;
+        focusWindow(winKey);
+      } else {
+        const tb = el.querySelector('.win-caption');
+        if (tb && !tb.classList.contains('inactive')) {
+          minimizeWindow(winKey);
+        } else {
+          focusWindow(winKey);
+        }
+      }
+    }
+
+    function cascadeWindows() {
+      const keys = ['agents', 'antigravity', 'codex', 'claude'];
+      let top = 20;
+      let left = 40;
+      keys.forEach((k) => {
+        const el = document.getElementById(`win-${k}`);
+        if (el) {
+          el.style.display = 'flex';
+          el.classList.remove('maximized');
+          windowState[k].isMaximized = false;
+          windowState[k].isMinimized = false;
+          el.style.top = `${top}px`;
+          el.style.left = `${left}px`;
+          el.style.width = '640px';
+          el.style.height = '470px';
+          top += 30;
+          left += 30;
+          focusWindow(k);
+        }
+      });
+      playBeep(800, 0.08);
+    }
+
+    function showAbout() {
+      openWindow('about');
+    }
+
+    // Start Menu
+    function toggleStartMenu(force) {
+      const m = document.getElementById('start-menu');
+      if (typeof force === 'boolean') {
+        m.style.display = force ? 'flex' : 'none';
+      } else {
+        m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
+      }
+    }
+
+    document.addEventListener('click', (e) => {
+      const startBtn = document.getElementById('start-btn');
+      const startMenu = document.getElementById('start-menu');
+      if (!startBtn.contains(e.target) && !startMenu.contains(e.target)) {
+        startMenu.style.display = 'none';
+      }
+    });
+
+    // Window Dragger
+    function startDrag(e, winId) {
+      if (e.target.tagName.toLowerCase() === 'button') return;
+      const win = document.getElementById(winId);
+      if (!win || win.classList.contains('maximized')) return;
+
+      const winKey = winId.replace('win-', '');
+      focusWindow(winKey);
+
+      let isDragging = true;
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const rect = win.getBoundingClientRect();
+      const initialLeft = rect.left;
+      const initialTop = rect.top;
+
+      function onMouseMove(moveEvent) {
+        if (!isDragging) return;
+        const dx = moveEvent.clientX - startX;
+        const dy = moveEvent.clientY - startY;
+        win.style.left = `${Math.max(0, initialLeft + dx)}px`;
+        win.style.top = `${Math.max(0, initialTop + dy)}px`;
+      }
+
+      function onMouseUp() {
+        isDragging = false;
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+      }
+
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    }
+
+    // Window Resizer
+    function startResize(e, winId, direction) {
+      e.preventDefault();
+      e.stopPropagation();
+      const win = document.getElementById(winId);
+      if (!win || win.classList.contains('maximized')) return;
+
+      const winKey = winId.replace('win-', '');
+      focusWindow(winKey);
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const rect = win.getBoundingClientRect();
+      const initialLeft = rect.left;
+      const initialTop = rect.top;
+      const initialWidth = rect.width;
+      const initialHeight = rect.height;
+
+      const minW = 320;
+      const minH = 220;
+
+      function onMouseMove(moveEvent) {
+        const dx = moveEvent.clientX - startX;
+        const dy = moveEvent.clientY - startY;
+
+        if (direction.includes('r')) {
+          win.style.width = `${Math.max(minW, initialWidth + dx)}px`;
+        }
+        if (direction.includes('b')) {
+          win.style.height = `${Math.max(minH, initialHeight + dy)}px`;
+        }
+        if (direction.includes('l')) {
+          const newWidth = Math.max(minW, initialWidth - dx);
+          if (newWidth > minW) {
+            win.style.width = `${newWidth}px`;
+            win.style.left = `${initialLeft + dx}px`;
+          }
+        }
+        if (direction.includes('t')) {
+          const newHeight = Math.max(minH, initialHeight - dy);
+          if (newHeight > minH) {
+            win.style.height = `${newHeight}px`;
+            win.style.top = `${initialTop + dy}px`;
+          }
+        }
+      }
+
+      function onMouseUp() {
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+      }
+
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    }
+
+    ['agents', 'antigravity', 'codex', 'claude', 'notepad', 'taskmgr'].forEach(key => {
+      const el = document.getElementById(`win-${key}`);
+      if (el) {
+        el.addEventListener('mousedown', () => focusWindow(key));
+      }
+    });
+
+    // -------------------------------------------------------------
+    // RENDER AGENTS
+    // -------------------------------------------------------------
+    function renderAgents(list) {
+      const tbody = document.getElementById('tbody-agents');
+      tbody.innerHTML = '';
+
+      document.getElementById('count-agents').textContent = list.length;
+      document.getElementById('badge-agents').textContent = `Showing: ${list.length}`;
+      document.getElementById('status-total-agents').textContent = `Total: ${list.length}`;
+
+      list.forEach((agent, idx) => {
+        const tr = document.createElement('tr');
+        tr.id = `row-agent-${idx}`;
+        tr.innerHTML = `
+          <td><strong>${escapeHtml(agent.name)}</strong></td>
+          <td><span class="detail-badge">${escapeHtml(agent.runtime)}</span></td>
+          <td>${escapeHtml(agent.role || agent.model || 'Agent')}</td>
+          <td title="${escapeHtml(agent.description)}">${escapeHtml(agent.description)}</td>
+        `;
+
+        tr.onclick = () => {
+          tbody.querySelectorAll('tr').forEach(r => r.classList.remove('highlighted'));
+          tr.classList.add('highlighted');
+          showAgentDetail(agent);
+          document.getElementById('status-agents').textContent = `Selected: ${agent.name} (${agent.runtime})`;
+        };
+
+        tr.ondblclick = () => {
+          if (agent.path) openNotepad(agent.path, agent.name);
+        };
+
+        tbody.appendChild(tr);
+      });
+
+      if (list.length > 0) {
+        tbody.children[0].click();
+      } else {
+        document.getElementById('detail-agents').innerHTML = `
+          <div class="empty-state-notice">
+            No matching agents found.
+          </div>
+        `;
+      }
+    }
+
+    function showAgentDetail(agent) {
+      const panel = document.getElementById('detail-agents');
+      const toolsHtml = (agent.tools || []).map(t => `<span class="detail-badge" class="detail-badge badge-tool">${escapeHtml(t)}</span>`).join(' ');
+
+      panel.innerHTML = `
+        <div class="detail-header">
+          <div class="detail-title">
+            ${escapeHtml(agent.name)}
+            <span class="detail-badge badge-active">● ${escapeHtml(agent.status || 'Active')}</span>
+          </div>
+          <div>
+            <span class="detail-badge">${escapeHtml(agent.runtime)}</span>
+            <span class="detail-badge" class="detail-badge badge-accent">${escapeHtml(agent.model || 'Gemini 3.8')}</span>
+          </div>
+        </div>
+        <div class="detail-desc"><strong>Role:</strong> ${escapeHtml(agent.role || 'Assistant')}<br>${escapeHtml(agent.description)}</div>
+        <div style="margin-bottom:6px;"><strong>Enabled Tools:</strong> ${toolsHtml || 'Standard Tools'}</div>
+        <div class="detail-path">${escapeHtml(agent.path || 'Built-in Antigravity Subagent')}</div>
+        <div class="detail-actions">
+          ${agent.path ? `<button class="default" onclick="openNotepad('${escapeJs(agent.path)}', '${escapeJs(agent.name)}')">📝 View Config</button>` : ''}
+          <button onclick="copyToClipboard('${escapeJs(agent.name)}', this)">📋 Copy Agent Name</button>
+          ${agent.path ? `<button onclick="openFolderInExplorer('${escapeJs(agent.path)}')">📂 Reveal in Explorer</button>` : ''}
+        </div>
+      `;
+    }
+
+    function filterAgents() {
+      const term = document.getElementById('search-agents').value.toLowerCase().trim();
+      const all = RAW_DATA.agents || [];
+      if (!term) {
+        renderAgents(all);
+        return;
+      }
+      const filtered = all.filter(a => 
+        a.name.toLowerCase().includes(term) ||
+        (a.description || '').toLowerCase().includes(term) ||
+        (a.runtime || '').toLowerCase().includes(term) ||
+        (a.role || '').toLowerCase().includes(term)
+      );
+      renderAgents(filtered);
+    }
+
+    // -------------------------------------------------------------
+    // RENDER SKILLS
+    // -------------------------------------------------------------
+    function renderSkills(winKey, list) {
+      const tbody = document.getElementById(`tbody-${winKey}`);
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      document.getElementById(`count-${winKey}`).textContent = list.length;
+      document.getElementById(`badge-${winKey}`).textContent = `Showing: ${list.length}`;
+      document.getElementById(`status-total-${winKey}`).textContent = `Total: ${list.length}`;
+
+      list.forEach((skill, idx) => {
+        const tr = document.createElement('tr');
+        tr.id = `row-${winKey}-${idx}`;
+        tr.innerHTML = `
+          <td><strong>${escapeHtml(skill.name)}</strong></td>
+          <td><span class="detail-badge">${escapeHtml(skill.source)}</span></td>
+          <td title="${escapeHtml(skill.full_desc)}">${escapeHtml(skill.short_desc)}</td>
+        `;
+
+        tr.onclick = () => {
+          tbody.querySelectorAll('tr').forEach(r => r.classList.remove('highlighted'));
+          tr.classList.add('highlighted');
+          showDetail(winKey, skill);
+          document.getElementById(`status-${winKey}`).textContent = `Selected: ${skill.name}`;
+        };
+
+        tr.ondblclick = () => {
+          openNotepad(skill.path, skill.name);
+        };
+
+        tbody.appendChild(tr);
+      });
+
+      if (list.length > 0) {
+        tbody.children[0].click();
+      } else {
+        document.getElementById(`detail-${winKey}`).innerHTML = `
+          <div class="empty-state-notice">
+            No matching skills found.
+          </div>
+        `;
+      }
+    }
+
+    function showDetail(winKey, skill) {
+      const panel = document.getElementById(`detail-${winKey}`);
+      panel.innerHTML = `
+        <div class="detail-header">
+          <div class="detail-title">
+            ${escapeHtml(skill.name)}
+          </div>
+          <span class="detail-badge">${escapeHtml(skill.source)}</span>
+        </div>
+        <div class="detail-desc">${escapeHtml(skill.full_desc)}</div>
+        <div class="detail-path">${escapeHtml(skill.path)}</div>
+        <div class="detail-actions">
+          <button class="default" onclick="openNotepad('${escapeJs(skill.path)}', '${escapeJs(skill.name)}')">Edit SKILL.md (Notepad)</button>
+          <button onclick="openFolderInExplorer('${escapeJs(skill.path)}')">📂 Reveal in Explorer</button>
+          <button onclick="copyToClipboard('${escapeJs(skill.name)}', this)">Copy Name</button>
+          <button onclick="copyToClipboard('${escapeJs(skill.path)}', this)">Copy Path</button>
+          <button class="btn-label-danger" onclick="promptDeleteSkill('${escapeJs(skill.name)}', '${escapeJs(skill.path)}')">Delete…</button>
+        </div>
+      `;
+    }
+
+    function filterSkills(winKey) {
+      const term = document.getElementById(`search-${winKey}`).value.toLowerCase().trim();
+      const all = RAW_DATA[winKey] || [];
+      if (!term) {
+        renderSkills(winKey, all);
+        return;
+      }
+      const filtered = all.filter(s => 
+        s.name.toLowerCase().includes(term) ||
+        s.full_desc.toLowerCase().includes(term) ||
+        s.source.toLowerCase().includes(term)
+      );
+      renderSkills(winKey, filtered);
+    }
+
+    function clearSearch(winKey) {
+      if (winKey === 'agents') {
+        document.getElementById('search-agents').value = '';
+        filterAgents();
+      } else {
+        document.getElementById(`search-${winKey}`).value = '';
+        filterSkills(winKey);
+      }
+    }
+
+    function sortTable(winKey, col) {
+      const state = windowState[winKey];
+      if (state.sortCol === col) {
+        state.sortAsc = !state.sortAsc;
+      } else {
+        state.sortCol = col;
+        state.sortAsc = true;
+      }
+
+      if (winKey === 'agents') {
+        const all = RAW_DATA.agents || [];
+        all.sort((a, b) => {
+          const valA = (a[col] || '').toLowerCase();
+          const valB = (b[col] || '').toLowerCase();
+          if (valA < valB) return state.sortAsc ? -1 : 1;
+          if (valA > valB) return state.sortAsc ? 1 : -1;
+          return 0;
+        });
+        filterAgents();
+      } else {
+        const all = RAW_DATA[winKey] || [];
+        all.sort((a, b) => {
+          const valA = (a[col] || '').toLowerCase();
+          const valB = (b[col] || '').toLowerCase();
+          if (valA < valB) return state.sortAsc ? -1 : 1;
+          if (valA > valB) return state.sortAsc ? 1 : -1;
+          return 0;
+        });
+        filterSkills(winKey);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // AI TASK MANAGER LOGIC
+    // -------------------------------------------------------------
+    function switchTaskmgrTab(tabId) {
+      ['perf', 'procs', 'apps'].forEach(t => {
+        const panel = document.getElementById(`tabpanel-${t}`);
+        if (panel) panel.style.display = (t === tabId ? 'flex' : 'none');
+        const tabLi = document.getElementById(`tab-li-${t}`);
+        if (tabLi) {
+          if (t === tabId) {
+            tabLi.setAttribute('aria-selected', 'true');
+          } else {
+            tabLi.removeAttribute('aria-selected');
+          }
+        }
+      });
+      if (tabId === 'apps') updateTaskmgrApps();
+    }
+
+    function updateTaskmgrApps() {
+      const tbody = document.getElementById('taskmgr-apps-list');
+      tbody.innerHTML = '';
+      const openWins = ['agents', 'antigravity', 'codex', 'claude', 'notepad', 'taskmgr'];
+      openWins.forEach(key => {
+        const win = document.getElementById(`win-${key}`);
+        if (win && win.style.display !== 'none') {
+          const tr = document.createElement('tr');
+          const title = win.querySelector('.win-caption-text').textContent.trim();
+          tr.innerHTML = `<td>${title}</td><td>Running</td>`;
+          tr.onclick = () => {
+            tbody.querySelectorAll('tr').forEach(r => r.classList.remove('highlighted'));
+            tr.classList.add('highlighted');
+            tr.dataset.winKey = key;
+          };
+          tbody.appendChild(tr);
+        }
+      });
+      if (tbody.children.length > 0) tbody.children[0].click();
+    }
+
+    function endSelectedTask() {
+      const sel = document.querySelector('#taskmgr-apps-list tr.highlighted');
+      if (sel && sel.dataset.winKey) {
+        closeWindow(sel.dataset.winKey);
+        updateTaskmgrApps();
+        showToast('Application terminated.');
+      }
+    }
+
+    // Oscilloscope canvas animation
+    const canvas = document.getElementById('cpu-canvas');
+    const ctx = canvas.getContext('2d');
+    const waveData = new Array(60).fill(15);
+    function drawWave() {
+      waveData.shift();
+      waveData.push(Math.floor(Math.random() * 45) + 10);
+
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Grid
+      ctx.strokeStyle = '#003300';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < canvas.width; x += 20) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += 15) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+      }
+
+      // Waveform
+      ctx.strokeStyle = '#00ff00';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      const step = canvas.width / (waveData.length - 1);
+      waveData.forEach((val, i) => {
+        const x = i * step;
+        const y = canvas.height - val;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    }
+    setInterval(drawWave, 250);
+
+    // -------------------------------------------------------------
+    // RUN DIALOG
+    // -------------------------------------------------------------
+    function executeRun() {
+      const query = document.getElementById('run-input').value.toLowerCase().trim();
+      closeWindow('run');
+      if (!query) return;
+
+      // Check agents
+      const agent = (RAW_DATA.agents || []).find(a => a.name.toLowerCase() === query);
+      if (agent) {
+        openWindow('agents');
+        document.getElementById('search-agents').value = query;
+        filterAgents();
+        showToast(`Found agent ${agent.name}`);
+        return;
+      }
+
+      // Check skills
+      for (const k of ['antigravity', 'codex', 'claude']) {
+        const sk = (RAW_DATA[k] || []).find(s => s.name.toLowerCase() === query);
+        if (sk) {
+          openWindow(k);
+          document.getElementById(`search-${k}`).value = query;
+          filterSkills(k);
+          showToast(`Found skill ${sk.name} in ${k}`);
+          return;
+        }
+      }
+
+      showToast(`No exact match for "${query}". Opening general search.`);
+      openWindow('antigravity');
+      document.getElementById('search-antigravity').value = query;
+      filterSkills('antigravity');
+    }
+
+    // -------------------------------------------------------------
+    // FILE ACTIONS (Edit, Delete, Create, Reveal)
+    // -------------------------------------------------------------
+    function openNotepad(path, name) {
+      windowState.notepad.currentPath = path;
+      windowState.notepad.currentSkillName = name;
+      document.getElementById('notepad-title').textContent = `Notepad - ${name}`;
+      document.getElementById('notepad-status').textContent = `Loading ${name}…`;
+
+      fetch('/api/skills/read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: jsonReq({ path: path })
+      })
+      .then(r => r.json())
+      .then(res => {
+        if (res.success) {
+          document.getElementById('notepad-content').value = res.content;
+          document.getElementById('notepad-status').textContent = `Editing ${name} (${res.content.length} bytes)`;
+          openWindow('notepad');
+        } else {
+          alert("Error opening skill file: " + res.error);
+        }
+      })
+      .catch(() => alert("Failed to load file. Is server running?"));
+    }
+
+    function saveNotepadContent() {
+      const path = windowState.notepad.currentPath;
+      const content = document.getElementById('notepad-content').value;
+      if (!path) return;
+
+      document.getElementById('notepad-status').textContent = 'Saving…';
+      fetch('/api/skills/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: jsonReq({ path: path, content: content })
+      })
+      .then(r => r.json())
+      .then(res => {
+        if (res.success) {
+          document.getElementById('notepad-status').textContent = 'Saved successfully!';
+          showToast('File saved & re-indexed!');
+          rescanAllSkills(true);
+        } else {
+          alert("Error saving: " + res.error);
+        }
+      });
+    }
+
+    function promptDeleteSkill(name, path) {
+      deleteTarget = { name: name, path: path };
+      document.getElementById('delete-skill-name').textContent = `"${name}"`;
+      document.getElementById('delete-skill-path').textContent = path;
+      const modal = document.getElementById('win-delete-confirm');
+      modal.style.display = 'block';
+      topZ += 50;
+      modal.style.zIndex = topZ;
+      playBeep(300, 0.2, 'square');
+    }
+
+    function closeDeleteDialog() {
+      document.getElementById('win-delete-confirm').style.display = 'none';
+      deleteTarget = null;
+    }
+
+    function confirmDeleteSkill() {
+      if (!deleteTarget) return;
+      const target = deleteTarget;
+      closeDeleteDialog();
+
+      showToast(`Deleting ${target.name}…`);
+      fetch('/api/skills/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: jsonReq({ path: target.path })
+      })
+      .then(r => r.json())
+      .then(res => {
+        if (res.success) {
+          showToast(`Deleted ${target.name}`);
+          RAW_DATA = res.data;
+          renderSkills('antigravity', RAW_DATA.antigravity || []);
+          renderSkills('codex', RAW_DATA.codex || []);
+          renderSkills('claude', RAW_DATA.claude || []);
+          if (RAW_DATA.agents) renderAgents(RAW_DATA.agents);
+        } else {
+          alert("Failed to delete skill: " + res.error);
+        }
+      });
+    }
+
+    function openNewSkillDialog(defaultRuntime) {
+      if (defaultRuntime) {
+        document.getElementById('new-skill-runtime').value = defaultRuntime;
+      }
+      document.getElementById('new-skill-name').value = '';
+      document.getElementById('new-skill-desc').value = '';
+      const modal = document.getElementById('win-new-skill');
+      modal.style.display = 'block';
+      topZ += 50;
+      modal.style.zIndex = topZ;
+      setTimeout(() => document.getElementById('new-skill-name').focus(), 50);
+    }
+
+    function closeNewSkillDialog() {
+      document.getElementById('win-new-skill').style.display = 'none';
+    }
+
+    function submitCreateSkill() {
+      const runtime = document.getElementById('new-skill-runtime').value;
+      const name = document.getElementById('new-skill-name').value.trim();
+      const desc = document.getElementById('new-skill-desc').value.trim();
+
+      if (!name) {
+        alert("Please enter a skill name!");
+        return;
+      }
+
+      closeNewSkillDialog();
+      showToast(`Creating skill "${name}"…`);
+
+      fetch('/api/skills/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: jsonReq({ runtime: runtime, name: name, description: desc })
+      })
+      .then(r => r.json())
+      .then(res => {
+        if (res.success) {
+          showToast(`Skill "${name}" created!`);
+          RAW_DATA = res.data;
+          renderSkills('antigravity', RAW_DATA.antigravity || []);
+          renderSkills('codex', RAW_DATA.codex || []);
+          renderSkills('claude', RAW_DATA.claude || []);
+          openWindow(runtime);
+          openNotepad(res.path, name);
+        } else {
+          alert("Error creating skill: " + res.error);
+        }
+      });
+    }
+
+    function openFolderInExplorer(path) {
+      showToast('Opening in Windows Explorer…');
+      fetch('/api/skills/open_folder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: jsonReq({ path: path })
+      });
+    }
+
+    function rescanAllSkills(silent) {
+      if (!silent) showToast('Rescanning skills & agents on disk…');
+      fetch('/api/skills/rescan', { method: 'POST' })
+        .then(r => r.json())
+        .then(res => {
+          if (res.success) {
+            RAW_DATA = res.data;
+            renderSkills('antigravity', RAW_DATA.antigravity || []);
+            renderSkills('codex', RAW_DATA.codex || []);
+            renderSkills('claude', RAW_DATA.claude || []);
+            if (RAW_DATA.agents) renderAgents(RAW_DATA.agents);
+            if (!silent) showToast('Database updated successfully!');
+          }
+        });
+    }
+
+    function copyToClipboard(text, btn) {
+      navigator.clipboard.writeText(text).then(() => {
+        const old = btn.textContent;
+        btn.textContent = 'Copied!';
+        playBeep(900, 0.05);
+        setTimeout(() => btn.textContent = old, 1500);
+      });
+    }
+
+    function escapeHtml(str) {
+      return (str || '').replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+      }[m]));
+    }
+
+    function escapeJs(str) {
+      return (str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+    }
+
+    function jsonReq(obj) {
+      return JSON.stringify(obj);
+    }
+
+    // Initial Data Load
+    fetch('/api/skills/list')
+      .then(r => r.json())
+      .then(data => {
+        RAW_DATA = data;
+        renderSkills('antigravity', data.antigravity || []);
+        renderSkills('codex', data.codex || []);
+        renderSkills('claude', data.claude || []);
+        if (data.agents) renderAgents(data.agents);
+      })
+      .catch(() => {
+        if (window.SKILLS_DATA) {
+          RAW_DATA = window.SKILLS_DATA;
+          renderSkills('antigravity', RAW_DATA.antigravity || []);
+          renderSkills('codex', RAW_DATA.codex || []);
+          renderSkills('claude', RAW_DATA.claude || []);
+          if (RAW_DATA.agents) renderAgents(RAW_DATA.agents);
+        }
+      });
+  </script>
+</body>
+</html>
