@@ -5,3 +5,5 @@ __pycache__/
 *.log
 skills_data.json
 skills_data.js
+
+scan_config.json

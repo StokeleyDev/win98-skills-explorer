@@ -1,4 +1,5 @@
 import os
+import hashlib
 import sys
 import json
 import shutil
@@ -26,6 +27,8 @@ class Win98SkillsHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path == '/api/skills/list':
             self.handle_list_skills()
+        elif self.path == '/api/skills/config':
+            self.handle_get_config()
         else:
             super().do_GET()
 
@@ -59,6 +62,8 @@ class Win98SkillsHandler(SimpleHTTPRequestHandler):
 
         if self.path == '/api/skills/rescan':
             self.handle_rescan()
+        elif self.path == '/api/skills/config':
+            self.handle_save_config(req_json)
         elif self.path == '/api/skills/read':
             self.handle_read_skill(req_json)
         elif self.path == '/api/skills/save':
@@ -97,31 +102,58 @@ class Win98SkillsHandler(SimpleHTTPRequestHandler):
         except Exception as e:
             self.send_json({'success': False, 'error': str(e)}, 500)
 
+    def handle_get_config(self):
+        try:
+            self.send_json({'success': True, 'config': scan_skills.load_config()})
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            self.send_json({'success': False, 'error': str(exc)}, 400)
+
+    def handle_save_config(self, req):
+        try:
+            config = scan_skills.validate_config(req.get('config'))
+            scan_skills.CONFIG_PATH.write_text(json.dumps(config, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+            data = scan_skills.main()
+            self.send_json({'success': True, 'data': data})
+        except (OSError, ValueError, TypeError) as exc:
+            self.send_json({'success': False, 'error': str(exc)}, 400)
+
     def handle_read_skill(self, req):
-        file_path = req.get('path', '')
-        p = Path(file_path)
-        if p.exists() and p.is_file():
-            try:
-                content = p.read_text(encoding='utf-8', errors='ignore')
-                self.send_json({'success': True, 'content': content, 'name': p.parent.name})
-            except Exception as e:
-                self.send_json({'success': False, 'error': str(e)}, 500)
-        else:
-            self.send_json({'success': False, 'error': 'File not found'}, 404)
+        p = Path(req.get('path', ''))
+        try:
+            raw = p.read_bytes()
+            content = raw.decode('utf-8-sig')
+            self.send_json({'success': True, 'content': content, 'name': p.parent.name,
+                            'version': hashlib.sha256(raw).hexdigest()})
+        except (OSError, UnicodeError) as exc:
+            self.send_json({'success': False, 'error': str(exc)}, 404)
 
     def handle_save_skill(self, req):
-        file_path = req.get('path', '')
-        new_content = req.get('content', '')
-        p = Path(file_path)
-        if p.exists() and p.is_file():
-            try:
-                p.write_text(new_content, encoding='utf-8')
-                scan_skills.main()
-                self.send_json({'success': True})
-            except Exception as e:
-                self.send_json({'success': False, 'error': str(e)}, 500)
-        else:
-            self.send_json({'success': False, 'error': 'File not found'}, 404)
+        p = Path(req.get('path', ''))
+        content = req.get('content')
+        expected = req.get('version')
+        if not isinstance(content, str) or not isinstance(expected, str):
+            self.send_json({'success': False, 'error': 'File content and version are required.'}, 400)
+            return
+        try:
+            current = p.read_bytes()
+            if hashlib.sha256(current).hexdigest() != expected:
+                self.send_json({'success': False, 'conflict': True,
+                                'error': 'The file changed on disk since it was opened. Your text has not been saved.'}, 409)
+                return
+            # Preserve a UTF-8 BOM and the file's predominant line ending.
+            newline = '\r\n' if current.count(b'\r\n') > current.count(b'\n') / 2 else '\n'
+            normalized = content.replace('\r\n', '\n').replace('\r', '\n')
+            raw = (b'\xef\xbb\xbf' if current.startswith(b'\xef\xbb\xbf') else b'') + normalized.replace('\n', newline).encode('utf-8')
+            p.write_bytes(raw)
+            version = hashlib.sha256(raw).hexdigest()
+        except (OSError, UnicodeError) as exc:
+            self.send_json({'success': False, 'error': str(exc)}, 500)
+            return
+        try:
+            data = scan_skills.main()
+            self.send_json({'success': True, 'version': version, 'data': data})
+        except Exception as exc:
+            self.send_json({'success': True, 'version': version, 'warning': f'File saved, but rescan failed: {exc}'})
 
     def handle_delete_skill(self, req):
         file_path = req.get('path', '')
@@ -171,20 +203,10 @@ class Win98SkillsHandler(SimpleHTTPRequestHandler):
         try:
             target_dir.mkdir(parents=True, exist_ok=True)
             skill_md = target_dir / 'SKILL.md'
-            content = f"""---
-name: {clean_name}
-description: "{description if description else 'Description of ' + clean_name}"
----
-
-# {name}
-
-## Overview
-{description if description else 'Provide a clear explanation of this skill here.'}
-
-## Instructions
-1. Step 1...
-2. Step 2...
-"""
+            metadata = scan_skills.yaml.safe_dump(
+                {'name': clean_name, 'description': description or 'Description of ' + clean_name},
+                allow_unicode=True, sort_keys=False)
+            content = f"---\n{metadata}---\n\n# {name}\n\n## Overview\n{description or 'Provide a clear explanation of this skill here.'}\n\n## Instructions\n1. Step 1...\n2. Step 2...\n"
             skill_md.write_text(content, encoding='utf-8')
             scan_skills.main()
             data = json.loads((BASE_DIR / 'skills_data.json').read_text(encoding='utf-8'))

@@ -15,18 +15,18 @@ Gray beveled controls, blue title bars, pixel fonts, a Start menu, movable windo
 
 | Window | What it does |
 | :--- | :--- |
-| Skills explorers | Search and inspect skill names, descriptions, sources, and paths |
-| Notepad | Read and edit `SKILL.md` files in configured writable skill folders |
+| Skills explorers | Search across runtimes, filter by source, and inspect skill names, descriptions, and paths |
+| Notepad | Edit `SKILL.md` with unsaved-change prompts and external-change conflict detection |
 | New Skill | Create a starter skill in a selected runtime's skill directory |
-| Agents manager | Browse built-in example agent entries and discovered agent/plugin metadata |
+| Agents manager | Shows when live agent runtime information is unavailable |
 | Refresh | Rescan local skill libraries and update the catalog |
 | Desktop extras | Start menu, taskbar, window controls, and playful retro dialogs |
 
-The task manager and built-in agent status labels are **interface simulations**, not live monitoring or agent execution. This app manages files and metadata; it does not launch the listed AI agents.
+The task manager performance data is explicitly labeled as a **simulation**; live agent runtime and process information is unavailable. This app manages files and metadata; it does not launch the listed AI agents.
 
 ## Quick start
 
-Requires **Python 3.10 or newer**. No pip packages, npm install, or build step needed.
+Requires **Python 3.10 or newer**. PyYAML is bundled with its license; no pip packages, npm install, or build step needed.
 
 ```bash
 git clone https://github.com/StokeleyDev/win98-skills-explorer.git
@@ -56,11 +56,15 @@ $env:WORKSPACE_SKILLS_DIR = 'C:\my-project\.agents\skills'
 python server.py
 ```
 
+Open **Search** (or press **Ctrl+K**) to search across runtimes. Choose **Scan folders** to edit the JSON list of discovery roots. Each entry contains a `runtime` (`antigravity`, `codex`, or `claude`), a `source` label, and an absolute `path`; environment variables and `~` are expanded. Saving rescans and stores the local configuration in `scan_config.json`, which is excluded from Git. The **Scan errors** button shows inaccessible directories, unreadable files, and invalid YAML front matter. Discovery settings do not expand the writable directories.
+
+The Notepad editor marks unsaved changes with `*`, asks before closing or switching files, and checks the file on disk for external changes. If the file has changed, saving is blocked and the editor keeps your text; reopen the file after copying your edits or explicitly discarding them. The browser shows its own prompt when closing or reloading with unsaved changes.
+
 New skills are created in the workspace skills directory, `CODEX_HOME/skills`, or `CLAUDE_CONFIG_DIR/skills`. File operations are restricted to `SKILL.md` files in these writable directories. Catalog entries from other scanned locations can be listed, but are not editable through the API.
 
 Keep the server local: it binds to **127.0.0.1**. Saving edits changes your real files; deleting a skill removes its entire folder. Back up skills you want to keep. Opening a file's folder in Explorer is Windows-specific.
 
-`skills_data.json` and `skills_data.js` are generated on your computer and excluded from Git. Your installed skill inventory is not bundled with this repository.
+`skills_data.json`, `skills_data.js`, and `scan_config.json` are generated on your computer and excluded from Git. Your installed skill inventory is not bundled with this repository.
 
 ## Actual interface
 
@@ -78,3 +82,7 @@ The image above is an actual application screenshot with an empty catalog. The c
 - `98.css` and `fonts/` — retro styling and bundled bitmap-style fonts.
 
 Font attribution and original license notices are retained in `fonts/src/`: **MS Sans Serif** and **MS Sans Serif Bold** by **lou**, distributed under **CC BY-SA 3.0**. This is an independent project, not affiliated with Microsoft, OpenAI, Anthropic, or Google.
+
+## Tests
+
+Run `python -m unittest discover -s tests -v` to check the scanner, save conflicts, and file boundaries.
