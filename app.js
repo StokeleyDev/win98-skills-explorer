@@ -502,7 +502,7 @@
 
     function showAgentDetail(agent) {
       const panel = document.getElementById('detail-agents');
-      const toolsHtml = (agent.tools || []).map(t => `<span class="detail-badge" class="detail-badge badge-tool">${escapeHtml(t)}</span>`).join(' ');
+      const toolsHtml = (agent.tools || []).map(t => `<span class="detail-badge badge-tool">${escapeHtml(t)}</span>`).join(' ');
 
       panel.innerHTML = `
         <div class="detail-header">
@@ -512,18 +512,21 @@
           </div>
           <div>
             <span class="detail-badge">${escapeHtml(agent.runtime)}</span>
-            <span class="detail-badge" class="detail-badge badge-accent">${escapeHtml(agent.model || 'Unknown')}</span>
+            <span class="detail-badge badge-accent">${escapeHtml(agent.model || 'Unknown')}</span>
           </div>
         </div>
         <div class="detail-desc"><strong>Role:</strong> ${escapeHtml(agent.role || 'Assistant')}<br>${escapeHtml(agent.description)}</div>
         <div style="margin-bottom:6px;"><strong>Enabled Tools:</strong> ${toolsHtml || 'Standard Tools'}</div>
         <div class="detail-path">${escapeHtml(agent.path || 'Built-in Antigravity Subagent')}</div>
-        <div class="detail-actions">
-          ${agent.path ? `<button class="default" onclick="openNotepad('${escapeJs(agent.path)}', '${escapeJs(agent.name)}')">📝 View Config</button>` : ''}
-          <button onclick="copyToClipboard('${escapeJs(agent.name)}', this)">📋 Copy Agent Name</button>
-          ${agent.path ? `<button onclick="openFolderInExplorer('${escapeJs(agent.path)}')">📂 Reveal in Explorer</button>` : ''}
-        </div>
+        <div class="detail-actions"></div>
       `;
+      const actions = panel.querySelector('.detail-actions');
+      const add = (label, action, className = '') => {
+        const button = document.createElement('button'); button.textContent = label; button.className = className; button.addEventListener('click', action); actions.appendChild(button);
+      };
+      if (agent.path) add('📝 View Config', () => openNotepad(agent.path, agent.name), 'default');
+      add('📋 Copy Agent Name', event => copyToClipboard(agent.name, event.currentTarget));
+      if (agent.path) add('📂 Reveal in Explorer', () => openFolderInExplorer(agent.path));
     }
 
     function filterAgents() {
@@ -609,11 +612,12 @@
       const add = (label, action, className = '') => {
         const button = document.createElement('button'); button.textContent = label; button.className = className; button.addEventListener('click', action); actions.appendChild(button);
       };
-      add('Edit SKILL.md (Notepad)', () => openNotepad(skill.path, skill.name), 'default');
+      const writable = skill.writable !== false;
+      add(writable ? 'Edit SKILL.md (Notepad)' : 'View SKILL.md (read-only)', () => openNotepad(skill.path, skill.name), 'default');
       add('📂 Reveal in Explorer', () => openFolderInExplorer(skill.path));
       add('Copy Name', event => copyToClipboard(skill.name, event.currentTarget));
       add('Copy Path', event => copyToClipboard(skill.path, event.currentTarget));
-      add('Delete…', () => promptDeleteSkill(skill.name, skill.path), 'btn-label-danger');
+      if (writable) add('Delete…', () => promptDeleteSkill(skill.name, skill.path), 'btn-label-danger');
     }
 
     function filterSkills(winKey) {
@@ -838,15 +842,17 @@
         editor.baseline = editorText.value;
         editor.version = result.version;
         editor.changedOnDisk = false;
+        editor.readOnly = result.writable === false;
         updateEditorTitle();
-        document.getElementById('notepad-status').textContent = `Editing ${name}`;
+        document.getElementById('notepad-status').textContent = editor.readOnly ? `Viewing ${name} (read-only)` : `Editing ${name}`;
         openWindow('notepad');
       } catch (err) { alert('Error opening file: ' + err.message); }
-      finally { editor.busy = false; editorText.readOnly = false; }
+      finally { editor.busy = false; editorText.readOnly = !!editor.readOnly; }
     }
     async function saveNotepadContent() {
       const path = windowState.notepad.currentPath;
       if (!path || editor.busy) return;
+      if (editor.readOnly) { alert('This skill is read-only: it lives outside the editable skills folders.'); return; }
       const content = editorText.value;
       editor.busy = true;
       document.getElementById('notepad-status').textContent = 'Saving…';
@@ -1013,9 +1019,6 @@
       }[m]));
     }
 
-    function escapeJs(str) {
-      return (str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
-    }
 
     function jsonReq(obj) {
       return JSON.stringify(obj);
@@ -1086,6 +1089,9 @@
     globalInput.addEventListener('input', renderGlobalSearch);
     document.addEventListener('keydown', event => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); openGlobalSearch(); }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's' && document.getElementById('win-notepad')?.style.display !== 'none' && windowState.notepad.currentPath) {
+        event.preventDefault(); saveNotepadContent();
+      }
       else if (event.key === 'Escape' && globalSearch.style.display === 'block') closeGlobalSearch();
     });
 

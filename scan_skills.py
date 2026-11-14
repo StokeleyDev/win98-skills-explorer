@@ -10,7 +10,7 @@ sys.path.insert(0, str(BASE_DIR / 'vendor'))
 import yaml
 
 HOME = Path.home()
-WORKSPACE_SKILLS = Path(os.getenv('WORKSPACE_SKILLS_DIR', str(Path.cwd().parent / '.agents' / 'skills'))).expanduser().resolve()
+WORKSPACE_SKILLS = Path(os.getenv('WORKSPACE_SKILLS_DIR', str(BASE_DIR.parent / '.agents' / 'skills'))).expanduser().resolve()
 CODEX_ROOT = Path(os.getenv('CODEX_HOME', str(HOME / '.codex'))).expanduser().resolve()
 CLAUDE_ROOT = Path(os.getenv('CLAUDE_CONFIG_DIR', str(HOME / '.claude'))).expanduser().resolve()
 GEMINI_ROOT = Path(os.getenv('GEMINI_HOME', str(HOME / '.gemini'))).expanduser().resolve()
@@ -38,14 +38,28 @@ def validate_config(config):
         if any(not isinstance(root.get(key), str) or not root[key].strip() for key in ('source', 'path')):
             raise ValueError(f'Root {i}: source and path must be non-empty strings.')
         expanded = os.path.expandvars(os.path.expanduser(root['path']))
-        if not Path(expanded).is_absolute():
+        resolved = Path(expanded)
+        if not resolved.is_absolute():
             raise ValueError(f'Root {i}: path must be absolute after expanding environment variables.')
+        if resolved.parent == resolved or resolved.resolve() == HOME.resolve():
+            raise ValueError(f'Root {i}: a drive root or the whole home folder is too broad to scan.')
     return config
 
 def load_config():
     if not CONFIG_PATH.exists():
         return DEFAULT_CONFIG
     return validate_config(json.loads(CONFIG_PATH.read_text(encoding='utf-8-sig')))
+
+def configured_roots():
+    try:
+        config = load_config()
+    except (OSError, ValueError, json.JSONDecodeError):
+        config = DEFAULT_CONFIG
+    return [Path(os.path.expandvars(os.path.expanduser(r['path']))).resolve() for r in config['roots']]
+
+def is_writable(path):
+    path = Path(path).resolve()
+    return any(path.is_relative_to(r.resolve()) and path.parent != r.resolve() for r in writable_skill_roots().values())
 
 def parse_skill(path, source, errors=None):
     errors = errors if errors is not None else []
@@ -78,7 +92,7 @@ def parse_skill(path, source, errors=None):
     short = re.sub(r'\s+', ' ', desc).split('. ')[0]
     if len(short) > 130: short = short[:127] + '...'
     elif not short.endswith('.'): short += '.'
-    return {'name': name, 'short_desc': short, 'full_desc': desc, 'path': str(path), 'source': source, 'folder': path.parent.name}
+    return {'name': name, 'short_desc': short, 'full_desc': desc, 'path': str(path), 'source': source, 'folder': path.parent.name, 'writable': is_writable(path)}
 
 def scan(config):
     data = {key: [] for key in RUNTIMES}
@@ -110,8 +124,10 @@ def scan(config):
 def main():
     data = scan(load_config())
     text = json.dumps(data, ensure_ascii=False, indent=2)
-    (BASE_DIR / 'skills_data.json').write_text(text, encoding='utf-8')
-    (BASE_DIR / 'skills_data.js').write_text(f'window.SKILLS_DATA = {text};\n', encoding='utf-8')
+    for name, body in (('skills_data.json', text), ('skills_data.js', f'window.SKILLS_DATA = {text};\n')):
+        tmp = BASE_DIR / (name + '.part')
+        tmp.write_text(body, encoding='utf-8')
+        os.replace(tmp, BASE_DIR / name)
     print(f"Scan complete: {sum(len(data[k]) for k in RUNTIMES)} skills, {len(data['scan_errors'])} errors")
     return data
 

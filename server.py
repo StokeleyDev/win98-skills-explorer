@@ -1,104 +1,176 @@
-import os
 import hashlib
-import sys
 import json
+import os
 import shutil
 import subprocess
+import sys
+import tempfile
+import threading
+from datetime import datetime
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from http.server import HTTPServer, SimpleHTTPRequestHandler
 
 PORT = 1998
 BASE_DIR = Path(__file__).parent.resolve()
+TRASH_DIR = BASE_DIR / '.trash'
 
 # Import the scanner logic
 sys.path.insert(0, str(BASE_DIR))
 import scan_skills
 
-def validated_skill_path(value):
+ALLOWED_HOSTS = (f'localhost:{PORT}', f'127.0.0.1:{PORT}')
+ALLOWED_ORIGINS = tuple(f'http://{host}' for host in ALLOWED_HOSTS)
+STATIC_FILES = {'/index.html', '/app.js', '/app.css', '/98.css', '/skills_data.js'}
+STATIC_PREFIXES = ('/fonts/converted/', '/docs/')
+READ_ROUTES = ('/api/skills/read', '/api/skills/open_folder')
+WRITE_ROUTES = ('/api/skills/save', '/api/skills/delete')
+
+# One scan at a time: requests are served on threads, and the scanner rewrites shared files.
+SCAN_LOCK = threading.Lock()
+
+
+def rescan():
+    with SCAN_LOCK:
+        return scan_skills.main()
+
+
+def _inside(path, root):
+    root = root.resolve()
+    return path.is_relative_to(root) and path.parent != root
+
+
+def validated_skill_path(value, write=False):
+    """Resolve a SKILL.md path. Reads are allowed anywhere under a configured scan root;
+    writes and deletes only under the runtime's own skills directory."""
+    if not isinstance(value, (str, os.PathLike)) or not str(value):
+        raise ValueError('Path is required')
     path = Path(value).expanduser().resolve()
-    if path.name != 'SKILL.md' or not any(path.is_relative_to(root.resolve()) and path.parent != root.resolve() for root in scan_skills.writable_skill_roots().values()):
-        raise ValueError('Only SKILL.md files inside configured skill directories can be managed')
+    if path.name != 'SKILL.md':
+        raise ValueError('Only SKILL.md files can be managed')
+    roots = list(scan_skills.writable_skill_roots().values())
+    if not write:
+        roots += scan_skills.configured_roots()
+    if not any(_inside(path, root) for root in roots):
+        raise ValueError('Path outside configured skill directories')
     return path
+
+
+def atomic_write(path, data):
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix='.tmp-', suffix='.part')
+    try:
+        with os.fdopen(fd, 'wb') as f:
+            f.write(data)
+        os.replace(tmp, path)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
+
+
+def move_to_trash(folder):
+    """Send to the system Recycle Bin when send2trash is installed, else to ./.trash."""
+    try:
+        from send2trash import send2trash
+        send2trash(str(folder))
+        return 'Recycle Bin'
+    except ImportError:
+        TRASH_DIR.mkdir(exist_ok=True)
+        target = TRASH_DIR / f"{datetime.now():%Y%m%d-%H%M%S}-{folder.name}"
+        shutil.move(str(folder), str(target))
+        return str(target)
+
 
 class Win98SkillsHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(BASE_DIR), **kwargs)
 
+    def host_ok(self):
+        if self.headers.get('Host') not in ALLOWED_HOSTS:
+            self.send_json({'error': 'Invalid host'}, 403)
+            return False
+        return True
+
+    def do_HEAD(self):
+        self.send_error(405)
+
     def do_GET(self):
-        if self.path == '/api/skills/list':
+        if not self.host_ok():
+            return
+        route = self.path.split('?', 1)[0]
+        if route == '/api/skills/list':
             self.handle_list_skills()
-        elif self.path == '/api/skills/config':
+        elif route == '/api/skills/config':
             self.handle_get_config()
-        else:
+        elif route == '/' or route in STATIC_FILES or (route.startswith(STATIC_PREFIXES) and '..' not in route):
             super().do_GET()
+        else:
+            self.send_json({'error': 'Not found'}, 404)
 
     def do_POST(self):
-        if self.headers.get('Host') not in (f'localhost:{PORT}', f'127.0.0.1:{PORT}'):
-            self.send_json({'error': 'Invalid host'}, 403)
+        if not self.host_ok():
             return
         origin = self.headers.get('Origin')
-        if origin and origin not in (f'http://localhost:{PORT}', f'http://127.0.0.1:{PORT}'):
+        if origin and origin not in ALLOWED_ORIGINS:
             self.send_json({'error': 'Invalid origin'}, 403)
             return
-        content_len = int(self.headers.get('Content-Length', 0))
+        try:
+            content_len = int(self.headers.get('Content-Length', 0))
+        except ValueError:
+            self.send_json({'error': 'Invalid Content-Length'}, 400)
+            return
         if content_len < 0 or content_len > 1_048_576:
             self.send_json({'error': 'Request too large'}, 413)
             return
-        post_data = self.rfile.read(content_len).decode('utf-8')
         try:
+            post_data = self.rfile.read(content_len).decode('utf-8')
             req_json = json.loads(post_data) if post_data else {}
-        except Exception:
-            req_json = {}
+        except (UnicodeError, json.JSONDecodeError):
+            self.send_json({'error': 'Invalid JSON'}, 400)
+            return
 
         if not isinstance(req_json, dict):
             self.send_json({'error': 'Expected a JSON object'}, 400)
             return
-        if self.path in ('/api/skills/read', '/api/skills/save', '/api/skills/delete', '/api/skills/open_folder'):
+        if self.path in READ_ROUTES + WRITE_ROUTES:
             try:
-                req_json['path'] = str(validated_skill_path(req_json.get('path', '')))
+                req_json['path'] = str(validated_skill_path(req_json.get('path'), write=self.path in WRITE_ROUTES))
             except (ValueError, OSError, TypeError):
-                self.send_json({'error': 'Path outside configured skill directories'}, 403)
+                self.send_json({'success': False, 'error': 'Path outside configured skill directories or read-only'}, 403)
                 return
 
-        if self.path == '/api/skills/rescan':
-            self.handle_rescan()
-        elif self.path == '/api/skills/config':
-            self.handle_save_config(req_json)
-        elif self.path == '/api/skills/read':
-            self.handle_read_skill(req_json)
-        elif self.path == '/api/skills/save':
-            self.handle_save_skill(req_json)
-        elif self.path == '/api/skills/delete':
-            self.handle_delete_skill(req_json)
-        elif self.path == '/api/skills/create':
-            self.handle_create_skill(req_json)
-        elif self.path == '/api/skills/open_folder':
-            self.handle_open_folder(req_json)
+        handlers = {
+            '/api/skills/rescan': lambda: self.handle_rescan(),
+            '/api/skills/config': lambda: self.handle_save_config(req_json),
+            '/api/skills/read': lambda: self.handle_read_skill(req_json),
+            '/api/skills/save': lambda: self.handle_save_skill(req_json),
+            '/api/skills/delete': lambda: self.handle_delete_skill(req_json),
+            '/api/skills/create': lambda: self.handle_create_skill(req_json),
+            '/api/skills/open_folder': lambda: self.handle_open_folder(req_json),
+        }
+        handler = handlers.get(self.path)
+        if handler:
+            handler()
         else:
-            self.send_response(404)
-            self.end_headers()
-            self.wfile.write(b'{"error": "Not found"}')
+            self.send_json({'error': 'Not found'}, 404)
 
     def send_json(self, data, code=200):
+        body = json.dumps(data, ensure_ascii=False).encode('utf-8')
         self.send_response(code)
         self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.send_header('Content-Length', str(len(body)))
         self.end_headers()
-        self.wfile.write(json.dumps(data, ensure_ascii=False).encode('utf-8'))
+        self.wfile.write(body)
 
     def handle_list_skills(self):
         json_path = BASE_DIR / 'skills_data.json'
         if json_path.exists():
             data = json.loads(json_path.read_text(encoding='utf-8'))
         else:
-            scan_skills.main()
-            data = json.loads((BASE_DIR / 'skills_data.json').read_text(encoding='utf-8'))
+            data = rescan()
         self.send_json(data)
 
     def handle_rescan(self):
         try:
-            scan_skills.main()
-            data = json.loads((BASE_DIR / 'skills_data.json').read_text(encoding='utf-8'))
-            self.send_json({'success': True, 'data': data})
+            self.send_json({'success': True, 'data': rescan()})
         except Exception as e:
             self.send_json({'success': False, 'error': str(e)}, 500)
 
@@ -111,9 +183,8 @@ class Win98SkillsHandler(SimpleHTTPRequestHandler):
     def handle_save_config(self, req):
         try:
             config = scan_skills.validate_config(req.get('config'))
-            scan_skills.CONFIG_PATH.write_text(json.dumps(config, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-            data = scan_skills.main()
-            self.send_json({'success': True, 'data': data})
+            atomic_write(scan_skills.CONFIG_PATH, (json.dumps(config, ensure_ascii=False, indent=2) + '\n').encode('utf-8'))
+            self.send_json({'success': True, 'data': rescan()})
         except (OSError, ValueError, TypeError) as exc:
             self.send_json({'success': False, 'error': str(exc)}, 400)
 
@@ -123,7 +194,8 @@ class Win98SkillsHandler(SimpleHTTPRequestHandler):
             raw = p.read_bytes()
             content = raw.decode('utf-8-sig')
             self.send_json({'success': True, 'content': content, 'name': p.parent.name,
-                            'version': hashlib.sha256(raw).hexdigest()})
+                            'version': hashlib.sha256(raw).hexdigest(),
+                            'writable': scan_skills.is_writable(p)})
         except (OSError, UnicodeError) as exc:
             self.send_json({'success': False, 'error': str(exc)}, 404)
 
@@ -144,94 +216,77 @@ class Win98SkillsHandler(SimpleHTTPRequestHandler):
             newline = '\r\n' if current.count(b'\r\n') > current.count(b'\n') / 2 else '\n'
             normalized = content.replace('\r\n', '\n').replace('\r', '\n')
             raw = (b'\xef\xbb\xbf' if current.startswith(b'\xef\xbb\xbf') else b'') + normalized.replace('\n', newline).encode('utf-8')
-            p.write_bytes(raw)
+            atomic_write(p, raw)
             version = hashlib.sha256(raw).hexdigest()
         except (OSError, UnicodeError) as exc:
             self.send_json({'success': False, 'error': str(exc)}, 500)
             return
         try:
-            data = scan_skills.main()
-            self.send_json({'success': True, 'version': version, 'data': data})
+            self.send_json({'success': True, 'version': version, 'data': rescan()})
         except Exception as exc:
             self.send_json({'success': True, 'version': version, 'warning': f'File saved, but rescan failed: {exc}'})
 
     def handle_delete_skill(self, req):
-        file_path = req.get('path', '')
-        p = Path(file_path)
-        # Safety checks: must end in SKILL.md and be inside approved directories
-        if not p.name.endswith('SKILL.md'):
-            self.send_json({'success': False, 'error': 'Target is not a valid SKILL.md file'}, 400)
-            return
-
-        skill_dir = p.parent
-        # Disallow deleting root directories
-        if len(skill_dir.parts) < 3:
-            self.send_json({'success': False, 'error': 'Cannot delete root directory'}, 400)
-            return
-
+        skill_dir = Path(req['path']).parent
         try:
-            shutil.rmtree(skill_dir)
-            scan_skills.main()
-            data = json.loads((BASE_DIR / 'skills_data.json').read_text(encoding='utf-8'))
-            self.send_json({'success': True, 'deleted': str(skill_dir), 'data': data})
+            where = move_to_trash(skill_dir)
+            self.send_json({'success': True, 'deleted': str(skill_dir), 'trash': where, 'data': rescan()})
         except Exception as e:
             self.send_json({'success': False, 'error': str(e)}, 500)
 
     def handle_create_skill(self, req):
-        runtime = req.get('runtime', 'antigravity').lower()
-        name = req.get('name', '').strip()
-        description = req.get('description', '').strip()
-
-        if not name:
-            self.send_json({'success': False, 'error': 'Skill name is required'}, 400)
+        runtime = str(req.get('runtime', 'antigravity')).lower()
+        name = str(req.get('name', '')).strip()
+        description = str(req.get('description', '')).strip()
+        roots = scan_skills.writable_skill_roots()
+        if runtime not in roots:
+            self.send_json({'success': False, 'error': f'Unknown runtime "{runtime}"'}, 400)
             return
 
-        # Sanitize name
-        clean_name = "".join([c if c.isalnum() or c in '-_' else '-' for c in name]).lower()
+        clean_name = ''.join(c if c.isalnum() or c in '-_' else '-' for c in name).lower().strip('-_')
+        if not clean_name:
+            self.send_json({'success': False, 'error': 'Skill name must contain letters or digits'}, 400)
+            return
 
-        if runtime == 'claude':
-            target_dir = (scan_skills.CLAUDE_ROOT / 'skills') / clean_name
-        elif runtime == 'codex':
-            target_dir = (scan_skills.CODEX_ROOT / 'skills') / clean_name
-        else: # antigravity
-            target_dir = scan_skills.WORKSPACE_SKILLS / clean_name
-
+        target_dir = roots[runtime] / clean_name
         if target_dir.exists():
             self.send_json({'success': False, 'error': f'Skill "{clean_name}" already exists!'}, 400)
             return
 
         try:
-            target_dir.mkdir(parents=True, exist_ok=True)
+            target_dir.mkdir(parents=True)
             skill_md = target_dir / 'SKILL.md'
             metadata = scan_skills.yaml.safe_dump(
                 {'name': clean_name, 'description': description or 'Description of ' + clean_name},
                 allow_unicode=True, sort_keys=False)
             content = f"---\n{metadata}---\n\n# {name}\n\n## Overview\n{description or 'Provide a clear explanation of this skill here.'}\n\n## Instructions\n1. Step 1...\n2. Step 2...\n"
             skill_md.write_text(content, encoding='utf-8')
-            scan_skills.main()
-            data = json.loads((BASE_DIR / 'skills_data.json').read_text(encoding='utf-8'))
-            self.send_json({'success': True, 'path': str(skill_md), 'data': data})
+            self.send_json({'success': True, 'path': str(skill_md), 'data': rescan()})
         except Exception as e:
             self.send_json({'success': False, 'error': str(e)}, 500)
 
     def handle_open_folder(self, req):
-        file_path = req.get('path', '')
-        p = Path(file_path)
-        if p.exists():
-            try:
-                # Use Windows explorer to highlight the file
-                subprocess.Popen(['explorer.exe', f'/select,{str(p)}'])
-                self.send_json({'success': True})
-            except Exception as e:
-                self.send_json({'success': False, 'error': str(e)}, 500)
-        else:
+        p = Path(req.get('path', ''))
+        if not p.exists():
             self.send_json({'success': False, 'error': 'Path does not exist'}, 404)
+            return
+        try:
+            if sys.platform == 'win32':
+                subprocess.Popen(['explorer.exe', f'/select,{p}'])
+            elif sys.platform == 'darwin':
+                subprocess.Popen(['open', '-R', str(p)])
+            else:
+                subprocess.Popen(['xdg-open', str(p.parent)])
+            self.send_json({'success': True})
+        except Exception as e:
+            self.send_json({'success': False, 'error': str(e)}, 500)
+
 
 def run():
-    server_address = ('127.0.0.1', PORT)
-    httpd = HTTPServer(server_address, Win98SkillsHandler)
+    httpd = ThreadingHTTPServer(('127.0.0.1', PORT), Win98SkillsHandler)
     print(f"Windows 98 Skills Explorer Server running at http://localhost:{PORT}")
     httpd.serve_forever()
+
 
 if __name__ == '__main__':
     run()
