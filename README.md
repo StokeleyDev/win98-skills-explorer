@@ -44,7 +44,7 @@ Defaults use the current user's home directory. Set environment variables before
 
 | Variable | Default |
 | :--- | :--- |
-| `WORKSPACE_SKILLS_DIR` | `.agents/skills` in the parent of the launch directory |
+| `WORKSPACE_SKILLS_DIR` | `.agents/skills` next to the app folder |
 | `CODEX_HOME` | `~/.codex` |
 | `CLAUDE_CONFIG_DIR` | `~/.claude` |
 | `GEMINI_HOME` | `~/.gemini` |
@@ -58,11 +58,11 @@ python server.py
 
 Open **Search** (or press **Ctrl+K**) to search across runtimes. Choose **Scan folders** to edit the JSON list of discovery roots. Each entry contains a `runtime` (`antigravity`, `codex`, or `claude`), a `source` label, and an absolute `path`; environment variables and `~` are expanded. Saving rescans and stores the local configuration in `scan_config.json`, which is excluded from Git. The **Scan errors** button shows inaccessible directories, unreadable files, and invalid YAML front matter. Discovery settings do not expand the writable directories.
 
-The Notepad editor marks unsaved changes with `*`, asks before closing or switching files, and checks the file on disk for external changes. If the file has changed, saving is blocked and the editor keeps your text; reopen the file after copying your edits or explicitly discarding them. The browser shows its own prompt when closing or reloading with unsaved changes.
+The Notepad editor saves with **Ctrl+S**, marks unsaved changes with `*`, asks before closing or switching files, and checks the file on disk for external changes. If the file has changed, saving is blocked and the editor keeps your text; reopen the file after copying your edits or explicitly discarding them. The browser shows its own prompt when closing or reloading with unsaved changes.
 
-New skills are created in the workspace skills directory, `CODEX_HOME/skills`, or `CLAUDE_CONFIG_DIR/skills`. File operations are restricted to `SKILL.md` files in these writable directories. Catalog entries from other scanned locations can be listed, but are not editable through the API.
+New skills are created in the workspace skills directory, `CODEX_HOME/skills`, or `CLAUDE_CONFIG_DIR/skills`. File operations are restricted to `SKILL.md` files in these writable directories. Catalog entries from other scanned locations (for example plugin skills) open read-only: they can be viewed but not saved or deleted. Drive roots and the whole home folder are rejected as scan roots.
 
-Keep the server local: it binds to **127.0.0.1**. Saving edits changes your real files; deleting a skill removes its entire folder. Back up skills you want to keep. Opening a file's folder in Explorer is Windows-specific.
+Keep the server local: it binds to **127.0.0.1**. The server answers only requests addressed to `localhost:1998` / `127.0.0.1:1998` and serves only the app's own static files. Saving edits changes your real files. Deleting a skill moves its whole folder to the Recycle Bin when the optional [`send2trash`](https://pypi.org/project/Send2Trash/) package is installed (`pip install send2trash`), otherwise to `.trash/` inside the app folder. **Reveal in Explorer** uses Explorer on Windows, Finder on macOS and `xdg-open` on Linux.
 
 `skills_data.json`, `skills_data.js`, and `scan_config.json` are generated on your computer and excluded from Git. Your installed skill inventory is not bundled with this repository.
 
@@ -85,4 +85,4 @@ Font attribution and original license notices are retained in `fonts/src/`: **MS
 
 ## Tests
 
-Run `python -m unittest discover -s tests -v` to check the scanner, save conflicts, and file boundaries.
+Run `python -m unittest discover -s tests -v` to check the scanner, save conflicts, file boundaries, host checks and the create/delete API. GitHub Actions runs the same suite on Windows, macOS and Linux for every push and pull request.
